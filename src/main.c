@@ -1,8 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "nori/config.h"
-#include "nori/string.h"
+#include "nori/server.h"
 
 // ================================================================
 // Command Line
@@ -162,7 +161,7 @@ int main(int argc, const char *argv[argc])
   nori_set_log_level(config.nc_log);
 
   if (args.user_action == ACTION_RUN) {
-    // status = action_run(config);
+    status = nori_server_run(&config);
   }
 
 cleanup:
