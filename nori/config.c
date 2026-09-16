@@ -1,0 +1,98 @@
+#include <lua5.4/lauxlib.h>
+#include <lua5.4/lualib.h>
+
+#include "nori/config.h"
+#include "nori/util.h"
+
+static const char config_base[] = {
+#embed "nori/base.lua"
+    , '\0'};
+
+static const char config_verify[] = {
+#embed "nori/verify.lua"
+    , '\0'};
+
+static constexpr struct nori_str LEVEL_ERROR = NORI_STR("error");
+static constexpr struct nori_str LEVEL_WARN = NORI_STR("warn");
+static constexpr struct nori_str LEVEL_NOTICE = NORI_STR("notice");
+static constexpr struct nori_str LEVEL_INFO = NORI_STR("info");
+
+struct nori_status
+nori_config_load(const struct nori_str path, struct nori_config out[const static 1])
+{
+  memset(out, 0, sizeof(struct nori_config));
+
+  lua_State *L = luaL_newstate();
+  luaL_openlibs(L);
+
+  if (luaL_loadstring(L, config_base)) {
+    nori_log_error("%s", lua_tostring(L, -1));
+    return NORI_FAILURE_ERROR("Could not load base config");
+  }
+
+  if (lua_pcall(L, 0, 0, 0)) {
+    nori_log_error("%s", lua_tostring(L, -1));
+    return NORI_FAILURE_ERROR("Could not execute base config");
+  }
+
+  if (path.len > 0) {
+    if (luaL_loadfile(L, path.ss)) {
+      nori_log_error("%s", lua_tostring(L, -1));
+      return NORI_FAILURE_ERROR("Could not open %s", path.ss);
+    }
+    if (lua_pcall(L, 0, 0, 0)) {
+      nori_log_error("%s", lua_tostring(L, -1));
+      return NORI_FAILURE_ERROR("Could not open execute %s", path.ss);
+    }
+  }
+
+  if (luaL_loadstring(L, config_verify)) {
+    nori_log_error("%s", lua_tostring(L, -1));
+    return NORI_FAILURE_ERROR("Could not load config verification");
+  }
+
+  if (lua_pcall(L, 0, 0, 0)) {
+    nori_log_error("%s", lua_tostring(L, -1));
+    return NORI_FAILURE_ERROR("Could not execute config verification");
+  }
+
+  // Our verification script succeeded. Assume it's safe to access globals.
+
+  {
+    lua_getglobal(L, "LOG_LEVEL");
+    size_t len = 0;
+    struct nori_str val = nori_str_wrap(lua_tolstring(L, -1, &len));
+
+    out->nc_log = LLL_ERR;
+    if (!nori_str_eq(val, LEVEL_ERROR)) {
+      out->nc_log |= LLL_WARN;
+      if (!nori_str_eq(val, LEVEL_WARN)) {
+        out->nc_log |= LLL_NOTICE;
+        if (!nori_str_eq(val, LEVEL_NOTICE)) {
+          out->nc_log |= LLL_INFO;
+          if (!nori_str_eq(val, LEVEL_INFO)) {
+            out->nc_log |= LLL_DEBUG;
+          }
+        }
+      }
+    }
+  }
+
+  {
+    lua_getglobal(L, "PORT");
+    long long val = lua_tointeger(L, -1);
+    out->nc_port = val;
+  }
+
+  {
+    out->nc_state = L;
+  }
+
+  return NORI_SUCCESS;
+}
+
+struct nori_status nori_config_unload(struct nori_config config[const static 1])
+{
+  lua_close(config->nc_state);
+  return NORI_SUCCESS;
+}

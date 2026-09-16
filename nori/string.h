@@ -17,6 +17,13 @@ struct nori_str {
                      .capacity = (sizeof(X) / sizeof(X[0]))})
 
 /**
+ * Wrapper around a C string.
+ *
+ * Ensure the pointer remains valid while the result is in use.
+ */
+struct nori_str nori_str_wrap(const char ss[static 1]);
+
+/**
  * Check if two strings are equal by value.
  *
  * @return true if s1 and s2 are equal.

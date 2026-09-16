@@ -14,7 +14,7 @@ endif
 
 .PHONY: clean
 
-server: main.o nori/string.o
+server: src/main.o nori/config.o nori/string.o
 	mkdir -p bin
 	$(CC) $^ -o bin/$@ $(LDFLAGS) $(LDLIBS)
 
