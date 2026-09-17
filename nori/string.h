@@ -37,6 +37,6 @@ struct nori_buf {
 };
 
 struct nori_status
-nori_bytes_create(size_t capacity, struct nori_buf out[const static 1]);
+nori_buf_create(size_t capacity, struct nori_buf out[const static 1]);
 
-void nori_bytes_destroy(struct nori_buf[const static 1]);
+void nori_buf_destroy(struct nori_buf[const static 1]);

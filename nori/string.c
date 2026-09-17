@@ -37,8 +37,7 @@ void nori_str_destroy(struct nori_str str[const static 1])
 // Bytes
 // ================================================================
 
-struct nori_status
-nori_bytes_create(size_t capacity, struct nori_buf out[const static 1])
+struct nori_status nori_buf_create(size_t capacity, struct nori_buf out[const static 1])
 {
   memset(out, 0, sizeof(*out));
 
@@ -57,7 +56,7 @@ nori_bytes_create(size_t capacity, struct nori_buf out[const static 1])
   return NORI_SUCCESS;
 }
 
-void nori_bytes_destroy(struct nori_buf buf[const static 1])
+void nori_buf_destroy(struct nori_buf buf[const static 1])
 {
   free(buf->bs);
   buf->bs = nullptr;

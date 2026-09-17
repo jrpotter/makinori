@@ -128,12 +128,21 @@ static struct nori_status cmdline_parse(
 // ================================================================
 
 static struct nori_router route_static = {
+    .nr_method = NORI_METHOD_GET,
     .nr_path = NORI_VIEW("/static"),
     .nr_next = nullptr};
 
+struct nori_status
+serve_root(struct nori_request request, struct nori_response *const response)
+{
+  return NORI_SUCCESS;
+}
+
 static struct nori_router route_root = {
+    .nr_method = NORI_METHOD_POST,
     .nr_path = NORI_VIEW("/"),
-    .nr_next = &route_static};
+    .nr_next = &route_static,
+    .nr_callback = serve_root};
 
 // ================================================================
 // Main

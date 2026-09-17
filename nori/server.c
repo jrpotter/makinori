@@ -2,6 +2,7 @@
 #include <signal.h>
 
 #include "nori/server.h"
+#include "nori/util.h"
 
 // ================================================================
 // Signaling
@@ -20,20 +21,30 @@ static void signal_server_stop(const int signal)
 // Processing
 // ================================================================
 
-static struct nori_status lws_http_route(
-    struct lws *const wsi,
-    const struct nori_router route,
-    struct nori_request request)
+struct nori_pss {
+  struct nori_request nc_request;
+  struct nori_router nc_route;
+  struct nori_response nc_response;
+};
+
+const struct nori_router *const nori_router_match(
+    const struct nori_server server[const static 1],
+    const struct nori_request request)
 {
-  struct nori_response response = {
-      .nr_status = HTTP_STATUS_OK,
-  };
+  for (const struct nori_router *route = &server->router; route;
+       route = route->nr_next) {
+    nori_log_warn("%s, %s", route->nr_path.ss, request.nr_path.ss);
+    if (route->nr_method != request.nr_method) {
+      continue;
+    }
+    if (!nori_view_eq(route->nr_path, request.nr_path)) {
+      // TODO: Support more complex route matching.
+      continue;
+    }
+    return route;
+  }
 
-  struct nori_status status = route.nr_callback(request, &response);
-
-  // TODO: Use the nori_bytes instance to populate the response.
-
-  return status;
+  return nullptr;
 }
 
 static int lws_http_callback(
@@ -43,43 +54,121 @@ static int lws_http_callback(
     void *in,
     size_t len)
 {
-  struct nori_status status = {};
+  struct nori_pss *pss = user;
 
-  const struct lws_protocols *proto = lws_get_protocol(wsi);
-  struct nori_server *server = proto->user;
+  // Ordered in roughly the order the callbacks are triggered.
+  switch (reason) {
+  case LWS_CALLBACK_WSI_CREATE: {
+    nori_log_debug("LWS_CALLBACK_WSI_CREATE");
+    break;
+  }
+  case LWS_CALLBACK_PROTOCOL_INIT: {
+    nori_log_debug("LWS_CALLBACK_PROTOCOL_INIT");
+    break;
+  }
+  case LWS_CALLBACK_FILTER_NETWORK_CONNECTION: {
+    nori_log_debug("LWS_CALLBACK_FILTER_NETWORK_CONNECTION");
+    break;
+  }
+  case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
+    nori_log_debug("LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED");
+    break;
+  }
+  case LWS_CALLBACK_EVENT_WAIT_CANCELLED: {
+    nori_log_debug("LWS_CALLBACK_EVENT_WAIT_CANCELLED");
+    break;
+  }
+  case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
+    nori_log_debug("LWS_CALLBACK_FILTER_HTTP_CONNECTION");
+    break;
+  }
+  case LWS_CALLBACK_HTTP_BIND_PROTOCOL: {
+    nori_log_debug("LWS_CALLBACK_HTTP_BIND_PROTOCOL");
+    break;
+  }
+  case LWS_CALLBACK_CHECK_ACCESS_RIGHTS: {
+    nori_log_debug("LWS_CALLBACK_CHECK_ACCESS_RIGHTS");
+    break;
+  }
+  case LWS_CALLBACK_HTTP: {
+    nori_log_debug("LWS_CALLBACK_HTTP");
 
-  if (reason == LWS_CALLBACK_HTTP) {
-    char path[2048] = {}; // TODO: Return 414 if longer than this
-    lws_snprintf(path, sizeof(path) - 1, "%s", (const char *)in);
+    memset(pss, 0, sizeof(struct nori_pss));
 
-    struct nori_request request = {
-        .nr_path = nori_view_create(path),
-    };
-
-    for (struct nori_router *route = &server->router; route; route = route->nr_next) {
-      if (nori_view_eq(route->nr_path, request.nr_path)) {
-        if (route->nr_callback) {
-          status = lws_http_route(wsi, *route, request);
-        } else {
-          nori_log_warn(
-              "No callback registered for path %s",
-              request.nr_path.len == 0 ? "<EMPTY>" : request.nr_path.ss);
-        }
-        break;
-      }
+    if (lws_hdr_total_length(wsi, WSI_TOKEN_GET_URI)) {
+      pss->nc_request.nr_method = NORI_METHOD_GET;
+    } else if (lws_hdr_total_length(wsi, WSI_TOKEN_POST_URI)) {
+      pss->nc_request.nr_method = NORI_METHOD_POST;
+    } else {
+      nori_log_info("Unmanaged HTTP method");
+      break;
     }
 
-    nori_log_warn(
-        "No route matched %s",
-        request.nr_path.len == 0 ? "<EMPTY>" : request.nr_path.ss);
+    char path[2048] = {'/'}; // TODO: Return 414 if longer than this
+    lws_snprintf(path + 1, sizeof(path) - 1, "%s", (const char *)in);
+    pss->nc_request.nr_path = nori_view_create(path); // TODO: This'll be lost.
+
+    const struct lws_protocols *proto = lws_get_protocol(wsi);
+    const struct nori_server *const server = proto->user;
+    const struct nori_router *const route = nori_router_match(server, pss->nc_request);
+
+    if (route == nullptr) {
+      break;
+    }
+
+    if (!route->nr_callback) {
+      nori_log_warn(
+          "No callback registered for path %s",
+          route->nr_path.len == 0 ? "<EMPTY>" : route->nr_path.ss);
+      break;
+    }
+
+    pss->nc_route = *route;
+
+    lws_callback_on_writable(wsi);
+
+    return 0;
+  }
+  case LWS_CALLBACK_HTTP_BODY: {
+    nori_log_debug("LWS_CALLBACK_HTTP_BODY");
+    // TODO: If POST, pull content.
+    break;
+  }
+  case LWS_CALLBACK_HTTP_BODY_COMPLETION: {
+    nori_log_debug("LWS_CALLBACK_HTTP_BODY_COMPLETION");
+    // TODO: If POST, pull content.
+    break;
+  }
+  case LWS_CALLBACK_HTTP_WRITEABLE: {
+    nori_log_debug("LWS_CALLBACK_HTTP_WRITEABLE");
+
+    break;
+  }
+  case LWS_CALLBACK_HTTP_DROP_PROTOCOL: {
+    nori_log_debug("LWS_CALLBACK_HTTP_DROP_PROTOCOL");
+    break;
+  }
+  case LWS_CALLBACK_CLOSED_HTTP: {
+    nori_log_debug("LWS_CALLBACK_CLOSED_HTTP");
+    break;
+  }
+  case LWS_CALLBACK_PROTOCOL_DESTROY: {
+    nori_log_debug("LWS_CALLBACK_PROTOCOL_DESTROY");
+    break;
+  }
+  case LWS_CALLBACK_WSI_DESTROY: {
+    nori_log_debug("LWS_CALLBACK_WSI_DESTROY");
+    break;
+  }
+  default: {
+    nori_log_info("Unmanaged callback %u", reason);
+    break;
+  }
   }
 
-  return status.success ? 0 : 1;
+  // TODO: Add a better 404 handler.
+  return lws_callback_http_dummy(wsi, reason, user, in, len);
 }
-
-// ================================================================
-// API
-// ================================================================
 
 struct nori_status nori_server_run(struct nori_server server[static 1])
 {
@@ -93,7 +182,7 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
       .callback = lws_http_callback,
       .id = 0,
       .user = server,
-      .per_session_data_size = 0,
+      .per_session_data_size = sizeof(struct nori_pss),
       .rx_buffer_size = 0,
       .tx_packet_size = 0};
 
@@ -101,18 +190,19 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
 
   const struct lws_http_mount http_mount = {
       .protocol = "http",
-      .mountpoint = "",
-      .mountpoint_len = 0,
+      .mountpoint = "/",
+      .mountpoint_len = 1,
       .origin_protocol = LWSMPRO_CALLBACK,
   };
 
   struct lws_context_creation_info info;
   lws_context_info_defaults(&info, nullptr);
-  info.vhost_name = "localhost";
-  info.pprotocols = pprotocols;
   info.mounts = &http_mount;
-  info.port = server->config.nc_port;
   info.options = LWS_SERVER_OPTION_EXPLICIT_VHOSTS;
+  info.port = server->config.nc_port;
+  info.pprotocols = pprotocols;
+  info.server_string = "maki";
+  info.vhost_name = "localhost";
 
   struct lws_context *context = lws_create_context(&info);
   if (!context) {
