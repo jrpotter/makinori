@@ -8,18 +8,21 @@
 // ================================================================
 
 static struct nori_flag FLAG_HELP = {
-    .nf_keys = {NORI_VIEW("-h"), NORI_VIEW("--help")},
-    .nf_arity = NORI_ARITY_ZERO,
+    .nf_sflag = SS("h"),
+    .nf_lflag = SS("help"),
+    .nf_arity = NORI_FLAG_ARITY_ZERO,
 };
 
 static struct nori_flag FLAG_CONFIG = {
-    .nf_keys = {NORI_VIEW("-c"), NORI_VIEW("--config")},
-    .nf_arity = NORI_ARITY_ONE,
+    .nf_sflag = SS("c"),
+    .nf_lflag = SS("config"),
+    .nf_arity = NORI_FLAG_ARITY_ONE,
 };
 
 struct nori_flag *NORI_FLAG_OPTIONS[] = {
     &FLAG_HELP,
     &FLAG_CONFIG,
+    nullptr,
 };
 
 // ================================================================
@@ -28,7 +31,7 @@ struct nori_flag *NORI_FLAG_OPTIONS[] = {
 
 static struct nori_router route_static = {
     .nr_method = NORI_METHOD_GET,
-    .nr_path = NORI_VIEW("/static"),
+    .nr_path = SS("/static"),
     .nr_next = nullptr};
 
 struct nori_status
@@ -39,7 +42,7 @@ serve_root(struct nori_request request, struct nori_response *const response)
 
 static struct nori_router route_root = {
     .nr_method = NORI_METHOD_POST,
-    .nr_path = NORI_VIEW("/"),
+    .nr_path = SS("/"),
     .nr_next = &route_static,
     .nr_callback = serve_root};
 
@@ -50,13 +53,13 @@ static struct nori_router route_root = {
 int main(int argc, const char *argv[argc])
 {
   struct nori_status status = nori_init();
-  if (!status.success) {
+  if (!status.ns_success) {
     return EXIT_FAILURE;
   }
 
-  struct nori_view action = {};
+  struct nori_slice action = {};
   status = nori_cmdline_parse(argc, argv, &action);
-  if (!status.success) {
+  if (!status.ns_success) {
     return EXIT_FAILURE;
   }
 
@@ -71,11 +74,11 @@ int main(int argc, const char *argv[argc])
 
   struct nori_config config = {};
   status = nori_config_load(FLAG_CONFIG.nf_vals[0], &config);
-  if (!status.success) {
+  if (!status.ns_success) {
     goto cleanup;
   }
 
-  if (nori_view_eq(action, NORI_VIEW("run"))) {
+  if (nori_slice_eq(action, SS("run"))) {
     struct nori_server server = {
         .config = config,
         .router = route_root,
@@ -87,5 +90,5 @@ int main(int argc, const char *argv[argc])
 
 cleanup:
   nori_config_unload(&config);
-  return status.success ? EXIT_SUCCESS : EXIT_FAILURE;
+  return status.ns_success ? EXIT_SUCCESS : EXIT_FAILURE;
 }

@@ -1,48 +1,16 @@
 #include "nori/util.h"
 
-// ================================================================
-// Views
-// ================================================================
-
-struct nori_view nori_view_create(const char ss[static 1])
-{
-  size_t len = 0;
-  for (const char *p = ss; *p; ++p) {
-    len += 1;
-  }
-  return (struct nori_view){.ss = ss, .len = len};
-}
-
-bool nori_view_eq(const struct nori_view s1, const struct nori_view s2)
-{
-  if (s1.len != s2.len) {
-    return false;
-  }
-
-  const char *p = s1.ss, *q = s2.ss;
-  for (; *p && *q; ++p, ++q) {
-    if (*p != *q) {
-      return false;
-    }
-  }
-
-  if (*p || *q) {
-    return false;
-  }
-
-  return true;
-}
-
-// ================================================================
-// Logging
-// ================================================================
+// The log level is usually specified at runtime. This specifies what the log
+// level should be prior to discovering the runtime value.
+static constexpr unsigned long INIT_LOG_LEVEL =
+    LLL_INFO | LLL_NOTICE | LLL_WARN | LLL_ERR;
 
 struct nori_status nori_init(void)
 {
 #ifdef NDEBUG
   nori_set_log_level(INIT_LOG_LEVEL);
 #else
-  nori_set_log_level(INIT_LOG_LEVEL | LLL_DEBUG | LLL_INFO);
+  nori_set_log_level(INIT_LOG_LEVEL | LLL_DEBUG);
 #endif
 
   return NORI_SUCCESS;

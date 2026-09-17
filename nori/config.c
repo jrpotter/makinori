@@ -11,15 +11,15 @@ static const char config_verify[] = {
 #embed "nori/verify.lua"
     , '\0'};
 
-static constexpr struct nori_view LEVEL_ERROR = NORI_VIEW("error");
-static constexpr struct nori_view LEVEL_WARN = NORI_VIEW("warn");
-static constexpr struct nori_view LEVEL_NOTICE = NORI_VIEW("notice");
-static constexpr struct nori_view LEVEL_INFO = NORI_VIEW("info");
+static constexpr struct nori_slice LEVEL_ERROR = SS("error");
+static constexpr struct nori_slice LEVEL_WARN = SS("warn");
+static constexpr struct nori_slice LEVEL_NOTICE = SS("notice");
+static constexpr struct nori_slice LEVEL_INFO = SS("info");
 
 struct nori_status
-nori_config_load(const struct nori_view path, struct nori_config out[const static 1])
+nori_config_load(const struct nori_slice path, struct nori_config out[const static 1])
 {
-  memset(out, 0, sizeof(struct nori_config));
+  memset(out, 0, sizeof(*out));
 
   lua_State *L = luaL_newstate();
   luaL_openlibs(L);
@@ -60,16 +60,16 @@ nori_config_load(const struct nori_view path, struct nori_config out[const stati
   {
     lua_getglobal(L, "LOG_LEVEL");
     size_t len = 0;
-    struct nori_view val = nori_view_create(lua_tolstring(L, -1, &len));
+    struct nori_slice val = nori_slice_wrap(lua_tolstring(L, -1, &len));
 
     out->nc_log = LLL_ERR;
-    if (!nori_view_eq(val, LEVEL_ERROR)) {
+    if (!nori_slice_eq(val, LEVEL_ERROR)) {
       out->nc_log |= LLL_WARN;
-      if (!nori_view_eq(val, LEVEL_WARN)) {
+      if (!nori_slice_eq(val, LEVEL_WARN)) {
         out->nc_log |= LLL_NOTICE;
-        if (!nori_view_eq(val, LEVEL_NOTICE)) {
+        if (!nori_slice_eq(val, LEVEL_NOTICE)) {
           out->nc_log |= LLL_INFO;
-          if (!nori_view_eq(val, LEVEL_INFO)) {
+          if (!nori_slice_eq(val, LEVEL_INFO)) {
             out->nc_log |= LLL_DEBUG;
           }
         }
@@ -95,5 +95,10 @@ nori_config_load(const struct nori_view path, struct nori_config out[const stati
 struct nori_status nori_config_unload(struct nori_config config[const static 1])
 {
   lua_close(config->nc_state);
+
+  config->nc_state = nullptr;
+  config->nc_port = 0;
+  config->nc_log = 0;
+
   return NORI_SUCCESS;
 }

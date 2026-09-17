@@ -2,46 +2,25 @@
 
 #include <libwebsockets.h>
 
+#include "nori/slice.h"
+
 #define CPP_PROXY(X) #X
 #define CPP_STR(X) CPP_PROXY(X)
 
-// ================================================================
-// Views
-// ================================================================
-
-/**
- * An immutable representation of a string.
- *
- * The ss pointer must remain valid while an instance is in use.
- */
-struct nori_view {
-  const char *ss;
-  size_t len;
+/// A representation of a success or failure.
+struct nori_status {
+  bool ns_success;
+  struct nori_slice ns_file;
+  struct nori_slice ns_line;
 };
 
-#define NORI_VIEW(X)                                                                   \
-  ((struct nori_view){.ss = ("" X ""), .len = (sizeof(X) / sizeof(X[0])) - 1})
+#define NORI_SUCCESS                                                                   \
+  ((struct nori_status){                                                               \
+      .ns_success = true, .ns_file = SS(__FILE__), .ns_line = SS(CPP_STR(__LINE__))})
 
-/**
- * Wrapper around a C string.
- */
-struct nori_view nori_view_create(const char ss[static 1]);
-
-/**
- * Check if two strings are equal by value.
- *
- * @return true if s1 and s2 are equal.
- */
-bool nori_view_eq(const struct nori_view s1, const struct nori_view s2);
-
-// ================================================================
-// Logging
-// ================================================================
-
-/**
- * Log level used prior to loading configuration file.
- */
-constexpr unsigned long INIT_LOG_LEVEL = LLL_INFO | LLL_NOTICE | LLL_WARN | LLL_ERR;
+#define NORI_FAILURE                                                                   \
+  ((struct nori_status){                                                               \
+      .ns_success = false, .ns_file = SS(__FILE__), .ns_line = SS(CPP_STR(__LINE__))})
 
 #define nori_set_log_level(lvl) (lws_set_log_level(lvl, nullptr))
 
@@ -55,22 +34,6 @@ constexpr unsigned long INIT_LOG_LEVEL = LLL_INFO | LLL_NOTICE | LLL_WARN | LLL_
 #define nori_log_notice(msg, ...) nori_log(LLL_NOTICE, msg __VA_OPT__(, ) __VA_ARGS__)
 #define nori_log_info(msg, ...) nori_log(LLL_INFO, msg __VA_OPT__(, ) __VA_ARGS__)
 #define nori_log_debug(msg, ...) nori_log(LLL_DEBUG, msg __VA_OPT__(, ) __VA_ARGS__)
-
-struct nori_status {
-  bool success;
-  struct nori_view file;
-  struct nori_view line;
-};
-
-#define NORI_SUCCESS                                                                   \
-  ((struct nori_status){.success = true,                                               \
-                        .file = NORI_VIEW(__FILE__),                                   \
-                        .line = NORI_VIEW(CPP_STR(__LINE__))})
-
-#define NORI_FAILURE                                                                   \
-  ((struct nori_status){.success = false,                                              \
-                        .file = NORI_VIEW(__FILE__),                                   \
-                        .line = NORI_VIEW(CPP_STR(__LINE__))})
 
 #define NORI_FAILURE_EMIT(lvl, msg, ...)                                               \
   ({                                                                                   \
@@ -87,4 +50,7 @@ struct nori_status {
 #define NORI_FAILURE_ERROR(msg, ...)                                                   \
   NORI_FAILURE_EMIT(LLL_ERR, msg __VA_OPT__(, ) __VA_ARGS__)
 
+/// Initialize the nori state.
+///
+/// Generally speaking, this should be the first thing called in `main()`.
 struct nori_status nori_init(void);

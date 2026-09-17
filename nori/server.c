@@ -4,10 +4,6 @@
 #include "nori/server.h"
 #include "nori/util.h"
 
-// ================================================================
-// Signaling
-// ================================================================
-
 static sig_atomic_t SERVER_RUNNING = 1;
 
 static void signal_server_stop(const int signal)
@@ -16,10 +12,6 @@ static void signal_server_stop(const int signal)
     SERVER_RUNNING = 0;
   }
 }
-
-// ================================================================
-// Processing
-// ================================================================
 
 struct nori_pss {
   struct nori_request nc_request;
@@ -37,7 +29,7 @@ const struct nori_router *const nori_router_match(
     if (route->nr_method != request.nr_method) {
       continue;
     }
-    if (!nori_view_eq(route->nr_path, request.nr_path)) {
+    if (!nori_slice_eq(route->nr_path, request.nr_path)) {
       // TODO: Support more complex route matching.
       continue;
     }
@@ -106,7 +98,7 @@ static int lws_http_callback(
 
     char path[2048] = {'/'}; // TODO: Return 414 if longer than this
     lws_snprintf(path + 1, sizeof(path) - 1, "%s", (const char *)in);
-    pss->nc_request.nr_path = nori_view_create(path); // TODO: This'll be lost.
+    pss->nc_request.nr_path = nori_slice_wrap(path); // TODO: This'll be lost.
 
     const struct lws_protocols *proto = lws_get_protocol(wsi);
     const struct nori_server *const server = proto->user;
