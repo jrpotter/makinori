@@ -12,13 +12,18 @@ else
 	LDFLAGS += -s
 endif
 
+OBJS := nori/config.o \
+		nori/server.o \
+		nori/string.o \
+		src/main.o
+
 .PHONY: clean
 
-server: src/main.o nori/config.o nori/server.o nori/string.o
+server: $(OBJS)
 	mkdir -p bin
 	$(CC) $^ -o bin/$@ $(LDFLAGS) $(LDLIBS)
 
-%.o: nori/util.h
+$(OBJS): nori/util.h
 
 clean:
 	find . -name "*.o" -delete

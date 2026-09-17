@@ -124,21 +124,32 @@ static struct nori_status cmdline_parse(
 }
 
 // ================================================================
+// Router
+// ================================================================
+
+static struct nori_router route_static = {
+    .nr_path = NORI_STR("static"),
+    .nr_next = nullptr};
+
+static struct nori_router route_root = {
+    .nr_path = NORI_STR(""),
+    .nr_next = &route_static};
+
+// ================================================================
 // Main
 // ================================================================
 
 int main(int argc, const char *argv[argc])
 {
+  struct nori_status status = {};
+
 #ifdef NDEBUG
-  lws_set_log_level(INIT_LOG_LEVEL, nullptr);
+  nori_set_log_level(INIT_LOG_LEVEL);
 #else
-  lws_set_log_level(INIT_LOG_LEVEL | LLL_DEBUG | LLL_INFO, nullptr);
+  nori_set_log_level(INIT_LOG_LEVEL | LLL_DEBUG | LLL_INFO);
 #endif
 
   struct user_args args = {};
-  struct nori_config config = {};
-  struct nori_status status = {};
-
   status = cmdline_parse(argc, argv, &args);
   if (!status.success) {
     return EXIT_FAILURE;
@@ -153,6 +164,7 @@ int main(int argc, const char *argv[argc])
     return EXIT_SUCCESS;
   }
 
+  struct nori_config config = {};
   status = nori_config_load(args.user_config, &config);
   if (!status.success) {
     goto cleanup;
@@ -160,8 +172,13 @@ int main(int argc, const char *argv[argc])
 
   nori_set_log_level(config.nc_log);
 
+  struct nori_server server = {
+      .config = config,
+      .router = route_root,
+  };
+
   if (args.user_action == ACTION_RUN) {
-    status = nori_server_run(&config);
+    status = nori_server_run(&server);
   }
 
 cleanup:

@@ -4,6 +4,19 @@
 
 #include "nori/string.h"
 
+#define nori_set_log_level(lvl) (lws_set_log_level(lvl, nullptr))
+
+#define nori_log(lvl, msg, ...)                                                        \
+  _lws_log(                                                                            \
+      lvl, ("[%s:%s] " msg ""), __FILE__,                                              \
+      CPP_STR(__LINE__) __VA_OPT__(, ) __VA_ARGS__)
+
+#define nori_log_error(msg, ...) nori_log(LLL_ERR, msg __VA_OPT__(, ) __VA_ARGS__)
+#define nori_log_warn(msg, ...) nori_log(LLL_WARN, msg __VA_OPT__(, ) __VA_ARGS__)
+#define nori_log_notice(msg, ...) nori_log(LLL_NOTICE, msg __VA_OPT__(, ) __VA_ARGS__)
+#define nori_log_info(msg, ...) nori_log(LLL_INFO, msg __VA_OPT__(, ) __VA_ARGS__)
+#define nori_log_debug(msg, ...) nori_log(LLL_DEBUG, msg __VA_OPT__(, ) __VA_ARGS__)
+
 struct nori_status {
   bool success;
   struct nori_str file;
@@ -24,8 +37,8 @@ struct nori_status {
   ({                                                                                   \
     auto status = NORI_FAILURE;                                                        \
     _lws_log(                                                                          \
-        lvl, ("%s:%s: " msg ""), status.file.ss,                                       \
-        status.line.ss __VA_OPT__(, ) __VA_ARGS__);                                    \
+        lvl, ("[%s:%s] " msg ""), __FILE__,                                            \
+        CPP_STR(__LINE__) __VA_OPT__(, ) __VA_ARGS__);                                 \
     status;                                                                            \
   })
 
@@ -34,10 +47,3 @@ struct nori_status {
 
 #define NORI_FAILURE_ERROR(msg, ...)                                                   \
   NORI_FAILURE_EMIT(LLL_ERR, msg __VA_OPT__(, ) __VA_ARGS__)
-
-#define nori_log_error(msg, ...) lwsl_err(msg __VA_OPT__(, ) __VA_ARGS__)
-#define nori_log_warn(msg, ...) lwsl_warn(msg __VA_OPT__(, ) __VA_ARGS__)
-#define nori_log_notice(msg, ...) lwsl_notice(msg __VA_OPT__(, ) __VA_ARGS__)
-#define nori_log_info(msg, ...) lwsl_info(msg __VA_OPT__(, ) __VA_ARGS__)
-#define nori_log_debug(msg, ...) lwsl_debug(msg __VA_OPT__(, ) __VA_ARGS__)
-#define nori_set_log_level(lvl) (lws_set_log_level(lvl, nullptr))
