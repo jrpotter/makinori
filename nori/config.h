@@ -14,11 +14,6 @@ struct nori_config {
 };
 
 /**
- * Log level used prior to loading configuration file.
- */
-constexpr unsigned long INIT_LOG_LEVEL = LLL_INFO | LLL_NOTICE | LLL_WARN | LLL_ERR;
-
-/**
  * Attempt to load a configuration file at path.
  *
  * @param path The path of a user-supplied configuration file. Ignored if length is 0.

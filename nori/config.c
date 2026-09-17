@@ -87,6 +87,8 @@ nori_config_load(const struct nori_view path, struct nori_config out[const stati
     out->nc_state = L;
   }
 
+  nori_set_log_level(out->nc_log);
+
   return NORI_SUCCESS;
 }
 

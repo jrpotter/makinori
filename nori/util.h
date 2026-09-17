@@ -38,6 +38,11 @@ bool nori_view_eq(const struct nori_view s1, const struct nori_view s2);
 // Logging
 // ================================================================
 
+/**
+ * Log level used prior to loading configuration file.
+ */
+constexpr unsigned long INIT_LOG_LEVEL = LLL_INFO | LLL_NOTICE | LLL_WARN | LLL_ERR;
+
 #define nori_set_log_level(lvl) (lws_set_log_level(lvl, nullptr))
 
 #define nori_log(lvl, msg, ...)                                                        \
@@ -81,3 +86,5 @@ struct nori_status {
 
 #define NORI_FAILURE_ERROR(msg, ...)                                                   \
   NORI_FAILURE_EMIT(LLL_ERR, msg __VA_OPT__(, ) __VA_ARGS__)
+
+struct nori_status nori_init(void);

@@ -1,5 +1,5 @@
 CC = clang
-CFLAGS = -Wall -Werror -std=c23 -I. -MMD
+CFLAGS = -Wall -Werror -std=c23 -I. -Iincludes -MMD
 CPPFLAGS = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=202405L
 LDFLAGS =
 LDLIBS = -llua5.4 -lwebsockets

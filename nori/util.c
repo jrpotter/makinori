@@ -32,3 +32,18 @@ bool nori_view_eq(const struct nori_view s1, const struct nori_view s2)
 
   return true;
 }
+
+// ================================================================
+// Logging
+// ================================================================
+
+struct nori_status nori_init(void)
+{
+#ifdef NDEBUG
+  nori_set_log_level(INIT_LOG_LEVEL);
+#else
+  nori_set_log_level(INIT_LOG_LEVEL | LLL_DEBUG | LLL_INFO);
+#endif
+
+  return NORI_SUCCESS;
+}
