@@ -2,7 +2,6 @@
 #include <lua5.4/lualib.h>
 
 #include "nori/config.h"
-#include "nori/util.h"
 
 static const char config_base[] = {
 #embed "nori/base.lua"
@@ -12,13 +11,13 @@ static const char config_verify[] = {
 #embed "nori/verify.lua"
     , '\0'};
 
-static constexpr struct nori_str LEVEL_ERROR = NORI_STR("error");
-static constexpr struct nori_str LEVEL_WARN = NORI_STR("warn");
-static constexpr struct nori_str LEVEL_NOTICE = NORI_STR("notice");
-static constexpr struct nori_str LEVEL_INFO = NORI_STR("info");
+static constexpr struct nori_view LEVEL_ERROR = NORI_VIEW("error");
+static constexpr struct nori_view LEVEL_WARN = NORI_VIEW("warn");
+static constexpr struct nori_view LEVEL_NOTICE = NORI_VIEW("notice");
+static constexpr struct nori_view LEVEL_INFO = NORI_VIEW("info");
 
 struct nori_status
-nori_config_load(const struct nori_str path, struct nori_config out[const static 1])
+nori_config_load(const struct nori_view path, struct nori_config out[const static 1])
 {
   memset(out, 0, sizeof(struct nori_config));
 
@@ -61,16 +60,16 @@ nori_config_load(const struct nori_str path, struct nori_config out[const static
   {
     lua_getglobal(L, "LOG_LEVEL");
     size_t len = 0;
-    struct nori_str val = nori_str_wrap(lua_tolstring(L, -1, &len));
+    struct nori_view val = nori_view_create(lua_tolstring(L, -1, &len));
 
     out->nc_log = LLL_ERR;
-    if (!nori_str_eq(val, LEVEL_ERROR)) {
+    if (!nori_view_eq(val, LEVEL_ERROR)) {
       out->nc_log |= LLL_WARN;
-      if (!nori_str_eq(val, LEVEL_WARN)) {
+      if (!nori_view_eq(val, LEVEL_WARN)) {
         out->nc_log |= LLL_NOTICE;
-        if (!nori_str_eq(val, LEVEL_NOTICE)) {
+        if (!nori_view_eq(val, LEVEL_NOTICE)) {
           out->nc_log |= LLL_INFO;
-          if (!nori_str_eq(val, LEVEL_INFO)) {
+          if (!nori_view_eq(val, LEVEL_INFO)) {
             out->nc_log |= LLL_DEBUG;
           }
         }

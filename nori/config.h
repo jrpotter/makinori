@@ -4,6 +4,9 @@
 
 #include "nori/util.h"
 
+/**
+ * Server configuration parameters.
+ */
 struct nori_config {
   unsigned long nc_log;
   unsigned long nc_port;
@@ -22,7 +25,7 @@ constexpr unsigned long INIT_LOG_LEVEL = LLL_INFO | LLL_NOTICE | LLL_WARN | LLL_
  * @param out  The struct nori_config to initialize.
  */
 struct nori_status
-nori_config_load(const struct nori_str path, struct nori_config out[const static 1]);
+nori_config_load(const struct nori_view path, struct nori_config out[const static 1]);
 
 /**
  * To call once finished using a struct nori_config.

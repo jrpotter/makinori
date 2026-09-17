@@ -15,24 +15,24 @@ enum action {
 
 struct user_args {
   enum action user_action;
-  struct nori_str user_config; // -c, --config
+  struct nori_view user_config; // -c, --config
 };
 
 struct flag {
-  struct nori_str flag_short;
-  struct nori_str flag_long;
+  struct nori_view flag_short;
+  struct nori_view flag_long;
   unsigned short flag_arity;
 };
 
 static constexpr struct flag FLAG_HELP = {
-    .flag_short = NORI_STR("-h"),
-    .flag_long = NORI_STR("--help"),
+    .flag_short = NORI_VIEW("-h"),
+    .flag_long = NORI_VIEW("--help"),
     .flag_arity = 0,
 };
 
 static constexpr struct flag FLAG_CONFIG = {
-    .flag_short = NORI_STR("-c"),
-    .flag_long = NORI_STR("--config"),
+    .flag_short = NORI_VIEW("-c"),
+    .flag_long = NORI_VIEW("--config"),
     .flag_arity = 1,
 };
 
@@ -41,11 +41,11 @@ static const struct flag *FLAG_OPTIONS[] = {
     &FLAG_CONFIG,
 };
 
-static const struct flag *flag_match(struct nori_str key)
+static const struct flag *flag_match(struct nori_view key)
 {
   for (size_t i = 0; i < sizeof(FLAG_OPTIONS) / sizeof(FLAG_OPTIONS[0]); ++i) {
-    if (nori_str_eq(key, FLAG_OPTIONS[i]->flag_short) ||
-        nori_str_eq(key, FLAG_OPTIONS[i]->flag_long)) {
+    if (nori_view_eq(key, FLAG_OPTIONS[i]->flag_short) ||
+        nori_view_eq(key, FLAG_OPTIONS[i]->flag_long)) {
       return FLAG_OPTIONS[i];
     }
   }
@@ -65,7 +65,7 @@ static struct nori_status cmdline_parse(
   // etc. Look for this action first since it may dictate what flags are permitted.
   for (int i = 1; i < argc; ++i) {
     if (argv[i][0] == '-') {
-      const struct nori_str key = nori_str_wrap(argv[i]);
+      const struct nori_view key = nori_view_create(argv[i]);
       const struct flag *flag = flag_match(key);
       if (flag) {
         i += flag->flag_arity;
@@ -73,9 +73,9 @@ static struct nori_status cmdline_parse(
         return NORI_FAILURE_ERROR("Unknown flag %s", key.ss);
       }
     } else {
-      struct nori_str action = nori_str_wrap(argv[i]);
+      struct nori_view action = nori_view_create(argv[i]);
       enum action new_action = ACTION_NONE;
-      if (nori_str_eq(action, NORI_STR("run"))) {
+      if (nori_view_eq(action, NORI_VIEW("run"))) {
         new_action = ACTION_RUN;
       } else {
         return NORI_FAILURE_ERROR("Unknown action %s", action.ss);
@@ -99,7 +99,7 @@ static struct nori_status cmdline_parse(
       continue;
     }
 
-    const struct nori_str key = nori_str_wrap(argv[i]);
+    const struct nori_view key = nori_view_create(argv[i]);
     const struct flag *flag = flag_match(key);
     assert(flag); // checked in previous loop
 
@@ -112,7 +112,7 @@ static struct nori_status cmdline_parse(
       return NORI_FAILURE_ERROR("Missing values for '%s'\n", key.ss);
     }
 
-    struct nori_str val = nori_str_wrap(argv[i + 1]);
+    struct nori_view val = nori_view_create(argv[i + 1]);
     if (flag == &FLAG_CONFIG) {
       out->user_config = val;
     } else {
@@ -128,11 +128,11 @@ static struct nori_status cmdline_parse(
 // ================================================================
 
 static struct nori_router route_static = {
-    .nr_path = NORI_STR("static"),
+    .nr_path = NORI_VIEW("/static"),
     .nr_next = nullptr};
 
 static struct nori_router route_root = {
-    .nr_path = NORI_STR(""),
+    .nr_path = NORI_VIEW("/"),
     .nr_next = &route_static};
 
 // ================================================================

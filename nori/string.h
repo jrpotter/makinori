@@ -1,31 +1,42 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdint.h>
 
-#define CPP_PROXY(X) #X
-#define CPP_STR(X) CPP_PROXY(X)
+#include "nori/util.h"
 
+// ================================================================
+// Strings
+// ================================================================
+
+/**
+ * A dynamically allocated string.
+ */
 struct nori_str {
-  const char *ss;
+  uint8_t *ss;
   size_t len;
   size_t capacity;
 };
 
-#define NORI_STR(X)                                                                    \
-  ((struct nori_str){.ss = ("" X ""),                                                  \
-                     .len = (sizeof(X) / sizeof(X[0])) - 1,                            \
-                     .capacity = (sizeof(X) / sizeof(X[0]))})
+struct nori_status
+nori_str_create(size_t capacity, struct nori_str out[const static 1]);
+
+void nori_str_destroy(struct nori_str[const static 1]);
+
+// ================================================================
+// Bytes
+// ================================================================
 
 /**
- * Wrapper around a C string.
- *
- * Ensure the pointer remains valid while the result is in use.
+ * A dynamically allocated buffer.
  */
-struct nori_str nori_str_wrap(const char ss[static 1]);
+struct nori_buf {
+  uint8_t *bs;
+  size_t len;
+  size_t capacity;
+};
 
-/**
- * Check if two strings are equal by value.
- *
- * @return true if s1 and s2 are equal.
- */
-bool nori_str_eq(const struct nori_str s1, const struct nori_str s2);
+struct nori_status
+nori_bytes_create(size_t capacity, struct nori_buf out[const static 1]);
+
+void nori_bytes_destroy(struct nori_buf[const static 1]);

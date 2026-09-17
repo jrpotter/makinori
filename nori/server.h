@@ -3,13 +3,17 @@
 #include "nori/config.h"
 
 struct nori_request {
-  struct nori_str nr_path;
+  struct nori_view nr_path;
+};
+
+struct nori_response {
+  unsigned int nr_status;
 };
 
 struct nori_router {
-  struct nori_str nr_path;
+  struct nori_view nr_path;
   struct nori_router *nr_next;
-  void (*nr_callback)(struct nori_request);
+  struct nori_status (*nr_callback)(struct nori_request, struct nori_response *const);
 };
 
 struct nori_server {

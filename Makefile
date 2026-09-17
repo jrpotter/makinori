@@ -15,6 +15,7 @@ endif
 OBJS := nori/config.o \
 		nori/server.o \
 		nori/string.o \
+		nori/util.o \
 		src/main.o
 
 .PHONY: clean
@@ -22,8 +23,6 @@ OBJS := nori/config.o \
 server: $(OBJS)
 	mkdir -p bin
 	$(CC) $^ -o bin/$@ $(LDFLAGS) $(LDLIBS)
-
-$(OBJS): nori/util.h
 
 clean:
 	find . -name "*.o" -delete

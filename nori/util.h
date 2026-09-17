@@ -2,7 +2,41 @@
 
 #include <libwebsockets.h>
 
-#include "nori/string.h"
+#define CPP_PROXY(X) #X
+#define CPP_STR(X) CPP_PROXY(X)
+
+// ================================================================
+// Views
+// ================================================================
+
+/**
+ * An immutable representation of a string.
+ *
+ * The ss pointer must remain valid while an instance is in use.
+ */
+struct nori_view {
+  const char *ss;
+  size_t len;
+};
+
+#define NORI_VIEW(X)                                                                   \
+  ((struct nori_view){.ss = ("" X ""), .len = (sizeof(X) / sizeof(X[0])) - 1})
+
+/**
+ * Wrapper around a C string.
+ */
+struct nori_view nori_view_create(const char ss[static 1]);
+
+/**
+ * Check if two strings are equal by value.
+ *
+ * @return true if s1 and s2 are equal.
+ */
+bool nori_view_eq(const struct nori_view s1, const struct nori_view s2);
+
+// ================================================================
+// Logging
+// ================================================================
 
 #define nori_set_log_level(lvl) (lws_set_log_level(lvl, nullptr))
 
@@ -19,19 +53,19 @@
 
 struct nori_status {
   bool success;
-  struct nori_str file;
-  struct nori_str line;
+  struct nori_view file;
+  struct nori_view line;
 };
 
 #define NORI_SUCCESS                                                                   \
   ((struct nori_status){.success = true,                                               \
-                        .file = NORI_STR(__FILE__),                                    \
-                        .line = NORI_STR(CPP_STR(__LINE__))})
+                        .file = NORI_VIEW(__FILE__),                                   \
+                        .line = NORI_VIEW(CPP_STR(__LINE__))})
 
 #define NORI_FAILURE                                                                   \
   ((struct nori_status){.success = false,                                              \
-                        .file = NORI_STR(__FILE__),                                    \
-                        .line = NORI_STR(CPP_STR(__LINE__))})
+                        .file = NORI_VIEW(__FILE__),                                   \
+                        .line = NORI_VIEW(CPP_STR(__LINE__))})
 
 #define NORI_FAILURE_EMIT(lvl, msg, ...)                                               \
   ({                                                                                   \

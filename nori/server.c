@@ -2,7 +2,6 @@
 #include <signal.h>
 
 #include "nori/server.h"
-#include "nori/util.h"
 
 // ================================================================
 // Signaling
@@ -21,13 +20,31 @@ static void signal_server_stop(const int signal)
 // Processing
 // ================================================================
 
-static int http_callback(
-    struct lws *wsi,
+static struct nori_status lws_http_route(
+    struct lws *const wsi,
+    const struct nori_router route,
+    struct nori_request request)
+{
+  struct nori_response response = {
+      .nr_status = HTTP_STATUS_OK,
+  };
+
+  struct nori_status status = route.nr_callback(request, &response);
+
+  // TODO: Use the nori_bytes instance to populate the response.
+
+  return status;
+}
+
+static int lws_http_callback(
+    struct lws *const wsi,
     enum lws_callback_reasons reason,
     void *user,
     void *in,
     size_t len)
 {
+  struct nori_status status = {};
+
   const struct lws_protocols *proto = lws_get_protocol(wsi);
   struct nori_server *server = proto->user;
 
@@ -36,19 +53,19 @@ static int http_callback(
     lws_snprintf(path, sizeof(path) - 1, "%s", (const char *)in);
 
     struct nori_request request = {
-        .nr_path = nori_str_wrap(path),
+        .nr_path = nori_view_create(path),
     };
 
     for (struct nori_router *route = &server->router; route; route = route->nr_next) {
-      if (nori_str_eq(route->nr_path, request.nr_path)) {
+      if (nori_view_eq(route->nr_path, request.nr_path)) {
         if (route->nr_callback) {
-          route->nr_callback(request);
+          status = lws_http_route(wsi, *route, request);
         } else {
           nori_log_warn(
               "No callback registered for path %s",
               request.nr_path.len == 0 ? "<EMPTY>" : request.nr_path.ss);
         }
-        return 0;
+        break;
       }
     }
 
@@ -57,7 +74,7 @@ static int http_callback(
         request.nr_path.len == 0 ? "<EMPTY>" : request.nr_path.ss);
   }
 
-  return 0;
+  return status.success ? 0 : 1;
 }
 
 // ================================================================
@@ -73,7 +90,7 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
 
   const struct lws_protocols http_protocol = {
       .name = "http",
-      .callback = http_callback,
+      .callback = lws_http_callback,
       .id = 0,
       .user = server,
       .per_session_data_size = 0,
@@ -84,8 +101,8 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
 
   const struct lws_http_mount http_mount = {
       .protocol = "http",
-      .mountpoint = "/",
-      .mountpoint_len = 1,
+      .mountpoint = "",
+      .mountpoint_len = 0,
       .origin_protocol = LWSMPRO_CALLBACK,
   };
 

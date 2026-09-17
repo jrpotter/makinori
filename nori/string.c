@@ -1,35 +1,66 @@
+#include <stdlib.h>
+
 #include "nori/string.h"
 
-struct nori_str nori_str_wrap(const char ss[static 1])
+// ================================================================
+// String
+// ================================================================
+
+struct nori_status nori_str_create(size_t capacity, struct nori_str out[const static 1])
 {
-  size_t len = 0;
-  for (const char *p = ss; *p; ++p) {
-    len += 1;
-  }
+  memset(out, 0, sizeof(*out));
 
-  return (struct nori_str){
-      .ss = ss,
-      .len = len,
-      .capacity = len + 1,
-  };
-}
-
-bool nori_str_eq(const struct nori_str s1, const struct nori_str s2)
-{
-  if (s1.len != s2.len) {
-    return false;
-  }
-
-  const char *p = s1.ss, *q = s2.ss;
-  for (; *p && *q; ++p, ++q) {
-    if (*p != *q) {
-      return false;
+  uint8_t *buffer = nullptr;
+  if (capacity > 0) {
+    buffer = malloc(sizeof(*buffer) * capacity);
+    if (!buffer) {
+      return NORI_FAILURE_ERROR("Could not allocate buffer");
     }
   }
 
-  if (*p || *q) {
-    return false;
+  out->ss = buffer;
+  out->len = 0;
+  out->capacity = capacity;
+
+  return NORI_SUCCESS;
+}
+
+void nori_str_destroy(struct nori_str str[const static 1])
+{
+  free(str->ss);
+  str->ss = nullptr;
+  str->len = 0;
+  str->capacity = 0;
+}
+
+// ================================================================
+// Bytes
+// ================================================================
+
+struct nori_status
+nori_bytes_create(size_t capacity, struct nori_buf out[const static 1])
+{
+  memset(out, 0, sizeof(*out));
+
+  uint8_t *buffer = nullptr;
+  if (capacity > 0) {
+    buffer = malloc(sizeof(*buffer) * capacity);
+    if (!buffer) {
+      return NORI_FAILURE_ERROR("Could not allocate buffer");
+    }
   }
 
-  return true;
+  out->bs = buffer;
+  out->len = 0;
+  out->capacity = capacity;
+
+  return NORI_SUCCESS;
+}
+
+void nori_bytes_destroy(struct nori_buf buf[const static 1])
+{
+  free(buf->bs);
+  buf->bs = nullptr;
+  buf->len = 0;
+  buf->capacity = 0;
 }
