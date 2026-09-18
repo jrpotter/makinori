@@ -13,8 +13,8 @@ enum nori_method {
 /// Instances of this `struct` are created by the server and supplied to
 /// user-registered callbacks defined in the `struct nori_router`.
 struct nori_request {
-  enum nori_method nr_method; // The HTTP method.
-  struct nori_slice nr_path;  // The full path component.
+  enum nori_method nr_method;   // The HTTP method.
+  struct nori_str_view nr_path; // The full path component.
 };
 
 /// A mutable HTTP response object.
@@ -24,8 +24,8 @@ struct nori_request {
 /// `struct nori_request`, the user is expected to update fields as they see
 /// fit. The server is responsible for then managing the updated response.
 struct nori_response {
-  unsigned int nr_status;            // The HTTP status code.
-  struct nori_slice nr_content_type; // TODO: Need dynamic content.
+  unsigned int nr_status;               // The HTTP status code.
+  struct nori_str_view nr_content_type; // TODO: Need dynamic content.
 };
 
 /// User-supplied callback registered within a `struct nori_router` instance.
@@ -44,12 +44,12 @@ nori_router_callback_t(const struct nori_request, struct nori_response *const);
 /// ```c
 /// static struct nori_router route_static = {
 ///     .nr_method = NORI_METHOD_GET,
-///     .nr_path   = SS("/static"),
+///     .nr_path   = NSV("/static"),
 ///     .nr_next   = nullptr};
 ///
 /// static struct nori_router route_root = {
 ///     .nr_method = NORI_METHOD_GET,
-///     .nr_path   = SS("/"),
+///     .nr_path   = NSV("/"),
 ///     .nr_next   = &route_static};
 /// ```
 ///
@@ -57,7 +57,7 @@ nori_router_callback_t(const struct nori_request, struct nori_response *const);
 /// not match, it then checks against the static route.
 struct nori_router {
   enum nori_method nr_method;
-  struct nori_slice nr_path;
+  struct nori_str_view nr_path;
   nori_router_callback_t *nr_callback;
   struct nori_router *nr_next;
 };

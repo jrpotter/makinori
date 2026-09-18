@@ -19,9 +19,9 @@ enum nori_flag_arity {
 ///
 /// Refer to `NORI_FLAG_OPTIONS` for usage.
 struct nori_flag {
-  struct nori_slice nf_vals[NORI_FLAG_ARITY_MAX];
-  struct nori_slice nf_sflag;
-  struct nori_slice nf_lflag;
+  struct nori_str_view nf_vals[NORI_FLAG_ARITY_MAX];
+  struct nori_str_view nf_sflag;
+  struct nori_str_view nf_lflag;
   enum nori_flag_arity nf_arity;
   bool nf_set;
 };
@@ -69,4 +69,4 @@ extern struct nori_flag *NORI_FLAG_OPTIONS[];
 struct nori_status nori_cmdline_parse(
     const int argc,
     const char *argv[const argc],
-    struct nori_slice out[static 1]);
+    struct nori_str_view out[static 1]);

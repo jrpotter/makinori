@@ -21,15 +21,16 @@ struct nori_pss {
 
 const struct nori_router *const nori_router_match(
     const struct nori_server server[const static 1],
-    const struct nori_request request)
+    const enum nori_method method,
+    const struct nori_str_view path)
 {
   for (const struct nori_router *route = &server->router; route;
        route = route->nr_next) {
-    nori_log_warn("%s, %s", route->nr_path.ss, request.nr_path.ss);
-    if (route->nr_method != request.nr_method) {
+    nori_log_warn("%s, %s", route->nr_path.view, path.view);
+    if (route->nr_method != method) {
       continue;
     }
-    if (!nori_slice_eq(route->nr_path, request.nr_path)) {
+    if (!nori_str_view_eq(route->nr_path, path)) {
       // TODO: Support more complex route matching.
       continue;
     }
@@ -96,13 +97,15 @@ static int lws_http_callback(
       break;
     }
 
-    char path[2048] = {'/'}; // TODO: Return 414 if longer than this
-    lws_snprintf(path + 1, sizeof(path) - 1, "%s", (const char *)in);
-    pss->nc_request.nr_path = nori_slice_wrap(path); // TODO: This'll be lost.
+    // TODO: Return 414 if longer than the @in_path buffer size.
+    char in_path[2048] = {'/'};
+    lws_snprintf(in_path + 1, sizeof(in_path) - 1, "%s", (const char *)in);
+    struct nori_str_view request_path = nori_str_view_of(in_path);
 
     const struct lws_protocols *proto = lws_get_protocol(wsi);
     const struct nori_server *const server = proto->user;
-    const struct nori_router *const route = nori_router_match(server, pss->nc_request);
+    const struct nori_router *const route =
+        nori_router_match(server, pss->nc_request.nr_method, request_path);
 
     if (route == nullptr) {
       break;
@@ -111,11 +114,12 @@ static int lws_http_callback(
     if (!route->nr_callback) {
       nori_log_warn(
           "No callback registered for path %s",
-          route->nr_path.len == 0 ? "<EMPTY>" : route->nr_path.ss);
+          route->nr_path.len == 0 ? "<EMPTY>" : route->nr_path.view);
       break;
     }
 
     pss->nc_route = *route;
+    pss->nc_request.nr_path = pss->nc_route.nr_path; // Route outlives the request.
 
     lws_callback_on_writable(wsi);
 
@@ -133,6 +137,9 @@ static int lws_http_callback(
   }
   case LWS_CALLBACK_HTTP_WRITEABLE: {
     nori_log_debug("LWS_CALLBACK_HTTP_WRITEABLE");
+
+    // TODO: Read from the end of a pipe associated with a response. Read in chunks
+    // and flush them out as needed.
 
     break;
   }

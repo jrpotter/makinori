@@ -3,11 +3,11 @@
 #include "nori/cmdline.h"
 #include "nori/util.h"
 
-static struct nori_flag *nori_flag_search(const struct nori_slice key)
+static struct nori_flag *nori_flag_search(const struct nori_str_view key)
 {
   for (size_t i = 0; NORI_FLAG_OPTIONS[i]; ++i) {
     struct nori_flag *f = NORI_FLAG_OPTIONS[i];
-    if (nori_slice_eq(key, f->nf_lflag) || nori_slice_eq(key, f->nf_sflag)) {
+    if (nori_str_view_eq(key, f->nf_lflag) || nori_str_view_eq(key, f->nf_sflag)) {
       return f;
     }
   }
@@ -17,15 +17,15 @@ static struct nori_flag *nori_flag_search(const struct nori_slice key)
 struct nori_status nori_cmdline_parse(
     const int argc,
     const char *argv[const argc],
-    struct nori_slice out[static 1])
+    struct nori_str_view out[static 1])
 {
   memset(out, 0, sizeof(*out));
 
   for (int i = 1; i < argc; ++i) {
-    struct nori_slice arg = nori_slice_wrap(argv[i]);
+    struct nori_str_view arg = nori_str_view_of(argv[i]);
 
     if (argv[i][0] == '-') {
-      arg = nori_slice_suffix(arg, argv[i][1] == '-' ? 2 : 1);
+      arg = nori_str_view_suffix(arg, argv[i][1] == '-' ? 2 : 1);
 
       struct nori_flag *const flag = nori_flag_search(arg);
       if (flag == nullptr) {
@@ -36,7 +36,7 @@ struct nori_status nori_cmdline_parse(
 
       flag->nf_set = true;
       for (size_t j = 1; j <= flag->nf_arity; ++i, ++j) {
-        flag->nf_vals[j] = nori_slice_wrap(argv[i + j]);
+        flag->nf_vals[j] = nori_str_view_of(argv[i + j]);
       }
     } else if (out->len == 0) {
       *out = arg;

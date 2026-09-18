@@ -11,13 +11,14 @@ static const char config_verify[] = {
 #embed "nori/verify.lua"
     , '\0'};
 
-static constexpr struct nori_slice LEVEL_ERROR = SS("error");
-static constexpr struct nori_slice LEVEL_WARN = SS("warn");
-static constexpr struct nori_slice LEVEL_NOTICE = SS("notice");
-static constexpr struct nori_slice LEVEL_INFO = SS("info");
+static constexpr struct nori_str_view LEVEL_ERROR = NSV("error");
+static constexpr struct nori_str_view LEVEL_WARN = NSV("warn");
+static constexpr struct nori_str_view LEVEL_NOTICE = NSV("notice");
+static constexpr struct nori_str_view LEVEL_INFO = NSV("info");
 
-struct nori_status
-nori_config_load(const struct nori_slice path, struct nori_config out[const static 1])
+struct nori_status nori_config_load(
+    const struct nori_str_view path,
+    struct nori_config out[const static 1])
 {
   memset(out, 0, sizeof(*out));
 
@@ -35,13 +36,13 @@ nori_config_load(const struct nori_slice path, struct nori_config out[const stat
   }
 
   if (path.len > 0) {
-    if (luaL_loadfile(L, path.ss)) {
+    if (luaL_loadfile(L, path.view)) {
       nori_log_error("%s", lua_tostring(L, -1));
-      return NORI_FAILURE_ERROR("Could not open %s", path.ss);
+      return NORI_FAILURE_ERROR("Could not open %s", path.view);
     }
     if (lua_pcall(L, 0, 0, 0)) {
       nori_log_error("%s", lua_tostring(L, -1));
-      return NORI_FAILURE_ERROR("Could not open execute %s", path.ss);
+      return NORI_FAILURE_ERROR("Could not open execute %s", path.view);
     }
   }
 
@@ -60,16 +61,16 @@ nori_config_load(const struct nori_slice path, struct nori_config out[const stat
   {
     lua_getglobal(L, "LOG_LEVEL");
     size_t len = 0;
-    struct nori_slice val = nori_slice_wrap(lua_tolstring(L, -1, &len));
+    struct nori_str_view val = nori_str_view_of(lua_tolstring(L, -1, &len));
 
     out->nc_log = LLL_ERR;
-    if (!nori_slice_eq(val, LEVEL_ERROR)) {
+    if (!nori_str_view_eq(val, LEVEL_ERROR)) {
       out->nc_log |= LLL_WARN;
-      if (!nori_slice_eq(val, LEVEL_WARN)) {
+      if (!nori_str_view_eq(val, LEVEL_WARN)) {
         out->nc_log |= LLL_NOTICE;
-        if (!nori_slice_eq(val, LEVEL_NOTICE)) {
+        if (!nori_str_view_eq(val, LEVEL_NOTICE)) {
           out->nc_log |= LLL_INFO;
-          if (!nori_slice_eq(val, LEVEL_INFO)) {
+          if (!nori_str_view_eq(val, LEVEL_INFO)) {
             out->nc_log |= LLL_DEBUG;
           }
         }

@@ -2,7 +2,7 @@
 
 #include <libwebsockets.h>
 
-#include "nori/slice.h"
+#include "nori/string.h"
 
 #define CPP_PROXY(X) #X
 #define CPP_STR(X) CPP_PROXY(X)
@@ -10,17 +10,19 @@
 /// A representation of a success or failure.
 struct nori_status {
   bool ns_success;
-  struct nori_slice ns_file;
-  struct nori_slice ns_line;
+  struct nori_str_view ns_file;
+  struct nori_str_view ns_line;
 };
 
 #define NORI_SUCCESS                                                                   \
-  ((struct nori_status){                                                               \
-      .ns_success = true, .ns_file = SS(__FILE__), .ns_line = SS(CPP_STR(__LINE__))})
+  ((struct nori_status){.ns_success = true,                                            \
+                        .ns_file = NSV(__FILE__),                                      \
+                        .ns_line = NSV(CPP_STR(__LINE__))})
 
 #define NORI_FAILURE                                                                   \
-  ((struct nori_status){                                                               \
-      .ns_success = false, .ns_file = SS(__FILE__), .ns_line = SS(CPP_STR(__LINE__))})
+  ((struct nori_status){.ns_success = false,                                           \
+                        .ns_file = NSV(__FILE__),                                      \
+                        .ns_line = NSV(CPP_STR(__LINE__))})
 
 #define nori_set_log_level(lvl) (lws_set_log_level(lvl, nullptr))
 

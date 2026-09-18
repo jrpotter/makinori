@@ -8,14 +8,14 @@
 // ================================================================
 
 static struct nori_flag FLAG_HELP = {
-    .nf_sflag = SS("h"),
-    .nf_lflag = SS("help"),
+    .nf_sflag = NSV("h"),
+    .nf_lflag = NSV("help"),
     .nf_arity = NORI_FLAG_ARITY_ZERO,
 };
 
 static struct nori_flag FLAG_CONFIG = {
-    .nf_sflag = SS("c"),
-    .nf_lflag = SS("config"),
+    .nf_sflag = NSV("c"),
+    .nf_lflag = NSV("config"),
     .nf_arity = NORI_FLAG_ARITY_ONE,
 };
 
@@ -31,7 +31,7 @@ struct nori_flag *NORI_FLAG_OPTIONS[] = {
 
 static struct nori_router route_static = {
     .nr_method = NORI_METHOD_GET,
-    .nr_path = SS("/static"),
+    .nr_path = NSV("/static"),
     .nr_next = nullptr};
 
 struct nori_status
@@ -42,7 +42,7 @@ serve_root(struct nori_request request, struct nori_response *const response)
 
 static struct nori_router route_root = {
     .nr_method = NORI_METHOD_POST,
-    .nr_path = SS("/"),
+    .nr_path = NSV("/"),
     .nr_next = &route_static,
     .nr_callback = serve_root};
 
@@ -57,7 +57,7 @@ int main(int argc, const char *argv[argc])
     return EXIT_FAILURE;
   }
 
-  struct nori_slice action = {};
+  struct nori_str_view action = {};
   status = nori_cmdline_parse(argc, argv, &action);
   if (!status.ns_success) {
     return EXIT_FAILURE;
@@ -78,14 +78,14 @@ int main(int argc, const char *argv[argc])
     goto cleanup;
   }
 
-  if (nori_slice_eq(action, SS("run"))) {
+  if (nori_str_view_eq(action, NSV("run"))) {
     struct nori_server server = {
         .config = config,
         .router = route_root,
     };
     status = nori_server_run(&server);
   } else {
-    status = NORI_FAILURE_ERROR("Unknown action %s", action.ss);
+    status = NORI_FAILURE_ERROR("Unknown action %s", action.view);
   }
 
 cleanup:
