@@ -4,6 +4,9 @@
 -- helpful to bump this up.
 COROUTINE_STACK = 256 * 64
 
+-- The event loop library used. One of poll.
+EVENT_LOOP = 'poll'
+
 -- Emit logs at this level or higher. One of debug, info, notice, warn, or error.
 LOG_LEVEL = 'debug'
 

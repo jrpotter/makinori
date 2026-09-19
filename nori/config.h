@@ -2,11 +2,16 @@
 
 #include "nori/util.h"
 
+enum nori_event_loop {
+  NORI_EVENT_LOOP_POLL,
+};
+
 /// Server configuration parameters.
 struct nori_config {
-  unsigned long long nc_co_stack; // COROUTINE_STACK
-  unsigned long nc_log;           // LOG_LEVEL
-  unsigned long nc_port;          // PORT
+  unsigned long long nc_co_stack;  // COROUTINE_STACK
+  enum nori_event_loop nc_ev_loop; // EVENT_LOOP
+  unsigned long nc_log;            // LOG_LEVEL
+  unsigned long nc_port;           // PORT
 };
 
 /// Load the base configuration state.

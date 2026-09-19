@@ -66,6 +66,14 @@ struct nori_status nori_config_load(
   }
 
   {
+    lua_getglobal(L, "EVENT_LOOP");
+    size_t len = 0;
+    [[maybe_unused]] struct nori_str_view val = // Must be 'poll'.
+        nori_str_view_of(lua_tolstring(L, -1, &len));
+    out->nc_ev_loop = NORI_EVENT_LOOP_POLL;
+  }
+
+  {
     lua_getglobal(L, "LOG_LEVEL");
     size_t len = 0;
     struct nori_str_view val = nori_str_view_of(lua_tolstring(L, -1, &len));

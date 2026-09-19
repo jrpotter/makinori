@@ -1,5 +1,6 @@
 #include <libwebsockets.h>
 #include <signal.h>
+#include <ucontext.h>
 
 #include "nori/server.h"
 #include "nori/util.h"
