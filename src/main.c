@@ -85,7 +85,8 @@ int main(int argc, const char *argv[argc])
     };
     status = nori_server_run(&server);
   } else {
-    status = NORI_FAILURE_ERROR("Unknown action %s", action.view);
+    nori_log_error("Unknown action %s", action.view);
+    status = NORI_FAILURE;
   }
 
 cleanup:

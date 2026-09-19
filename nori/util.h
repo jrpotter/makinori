@@ -37,21 +37,6 @@ struct nori_status {
 #define nori_log_info(msg, ...) nori_log(LLL_INFO, msg __VA_OPT__(, ) __VA_ARGS__)
 #define nori_log_debug(msg, ...) nori_log(LLL_DEBUG, msg __VA_OPT__(, ) __VA_ARGS__)
 
-#define NORI_FAILURE_EMIT(lvl, msg, ...)                                               \
-  ({                                                                                   \
-    auto status = NORI_FAILURE;                                                        \
-    _lws_log(                                                                          \
-        lvl, ("[%s:%s] " msg ""), __FILE__,                                            \
-        CPP_STR(__LINE__) __VA_OPT__(, ) __VA_ARGS__);                                 \
-    status;                                                                            \
-  })
-
-#define NORI_FAILURE_WARN(msg, ...)                                                    \
-  NORI_FAILURE_EMIT(LLL_WARN, msg __VA_OPT__(, ) __VA_ARGS__)
-
-#define NORI_FAILURE_ERROR(msg, ...)                                                   \
-  NORI_FAILURE_EMIT(LLL_ERR, msg __VA_OPT__(, ) __VA_ARGS__)
-
 /// Initialize the nori state.
 ///
 /// Generally speaking, this should be the first thing called in `main()`.

@@ -2,6 +2,7 @@
 #include <lua5.4/lualib.h>
 
 #include "nori/config.h"
+#include "nori/util.h"
 
 static const char config_base[] = {
 #embed "nori/base.lua"
@@ -26,34 +27,34 @@ struct nori_status nori_config_load(
   luaL_openlibs(L);
 
   if (luaL_loadstring(L, config_base)) {
-    nori_log_error("%s", lua_tostring(L, -1));
-    return NORI_FAILURE_ERROR("Could not load base config");
+    nori_log_error("Load base config: %s", lua_tostring(L, -1));
+    return NORI_FAILURE;
   }
 
   if (lua_pcall(L, 0, 0, 0)) {
-    nori_log_error("%s", lua_tostring(L, -1));
-    return NORI_FAILURE_ERROR("Could not execute base config");
+    nori_log_error("Exec base config: %s", lua_tostring(L, -1));
+    return NORI_FAILURE;
   }
 
   if (path.len > 0) {
     if (luaL_loadfile(L, path.view)) {
-      nori_log_error("%s", lua_tostring(L, -1));
-      return NORI_FAILURE_ERROR("Could not open %s", path.view);
+      nori_log_error("Open user config: %s", lua_tostring(L, -1));
+      return NORI_FAILURE;
     }
     if (lua_pcall(L, 0, 0, 0)) {
-      nori_log_error("%s", lua_tostring(L, -1));
-      return NORI_FAILURE_ERROR("Could not open execute %s", path.view);
+      nori_log_error("Exec user config: %s", lua_tostring(L, -1));
+      return NORI_FAILURE;
     }
   }
 
   if (luaL_loadstring(L, config_verify)) {
-    nori_log_error("%s", lua_tostring(L, -1));
-    return NORI_FAILURE_ERROR("Could not load config verification");
+    nori_log_error("Load verify config: %s", lua_tostring(L, -1));
+    return NORI_FAILURE;
   }
 
   if (lua_pcall(L, 0, 0, 0)) {
-    nori_log_error("%s", lua_tostring(L, -1));
-    return NORI_FAILURE_ERROR("Could not execute config verification");
+    nori_log_error("Exec verify config: %s", lua_tostring(L, -1));
+    return NORI_FAILURE;
   }
 
   // Our verification script succeeded. Assume it's safe to access globals.

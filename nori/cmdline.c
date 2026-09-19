@@ -29,9 +29,11 @@ struct nori_status nori_cmdline_parse(
 
       struct nori_flag *const flag = nori_flag_search(arg);
       if (flag == nullptr) {
-        return NORI_FAILURE_ERROR("Unknown flag %s", argv[i]);
+        nori_log_error("Unknown flag %s", argv[i]);
+        return NORI_FAILURE;
       } else if (i + flag->nf_arity >= argc) {
-        return NORI_FAILURE_ERROR("Missing values for %s", argv[i]);
+        nori_log_error("Missing values for %s", argv[i]);
+        return NORI_FAILURE;
       }
 
       flag->nf_set = true;
@@ -41,7 +43,8 @@ struct nori_status nori_cmdline_parse(
     } else if (out->len == 0) {
       *out = arg;
     } else {
-      return NORI_FAILURE_ERROR("Cannot specify > 1 action");
+      nori_log_error("Cannot specify > 1 action");
+      return NORI_FAILURE;
     }
   }
 

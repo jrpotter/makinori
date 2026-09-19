@@ -179,7 +179,8 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
 {
   const struct sigaction act = {.sa_handler = signal_server_stop};
   if (sigaction(SIGINT, &act, nullptr) == -1) {
-    return NORI_FAILURE_ERROR("Could not install interrupt handler");
+    nori_log_error("Could not install interrupt handler");
+    return NORI_FAILURE;
   };
 
   const struct lws_protocols http_protocol = {
@@ -211,12 +212,14 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
 
   struct lws_context *context = lws_create_context(&info);
   if (!context) {
-    return NORI_FAILURE_ERROR("Could not create lws context");
+    nori_log_error("Could not create lws context");
+    return NORI_FAILURE;
   }
 
   struct lws_vhost *vh = lws_create_vhost(context, &info);
   if (!vh) {
-    return NORI_FAILURE_ERROR("Could not create lws vhost");
+    nori_log_error("Could not create lws vhost");
+    return NORI_FAILURE;
   }
 
   nori_log_notice("Starting server on port %ld", server->config.nc_port);

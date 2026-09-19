@@ -49,7 +49,8 @@ nori_str_create(const size_t capacity, struct nori_str out[const static 1])
   if (capacity > 0) {
     buffer = malloc(sizeof(*buffer) * capacity);
     if (!buffer) {
-      return NORI_FAILURE_ERROR("Could not allocate buffer");
+      nori_log_error("Could not allocate buffer");
+      return NORI_FAILURE;
     }
   }
 
@@ -68,7 +69,8 @@ struct nori_status(nori_str_copy)(
   if (offset + src.len > dst->capacity) {
     char *new_buffer = realloc(dst->buffer, dst->capacity * 2);
     if (!new_buffer) {
-      return NORI_FAILURE_ERROR("Could not reallocate buffer");
+      nori_log_error("Could not reallocate buffer");
+      return NORI_FAILURE;
     }
     dst->buffer = new_buffer;
     dst->capacity = dst->capacity * 2;
