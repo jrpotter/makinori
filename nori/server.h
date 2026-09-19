@@ -4,6 +4,7 @@
 
 /// A representation of supported HTTP methods.
 enum nori_method {
+  NORI_METHOD_NONE,
   NORI_METHOD_GET,
   NORI_METHOD_POST,
 };

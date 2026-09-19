@@ -14,8 +14,8 @@ static void signal_server_stop(const int signal)
 }
 
 struct nori_pss {
+  const struct nori_router *nc_route;
   struct nori_request nc_request;
-  struct nori_router nc_route;
   struct nori_response nc_response;
 };
 
@@ -88,10 +88,11 @@ static int lws_http_callback(
 
     memset(pss, 0, sizeof(struct nori_pss));
 
+    enum nori_method request_method = NORI_METHOD_NONE;
     if (lws_hdr_total_length(wsi, WSI_TOKEN_GET_URI)) {
-      pss->nc_request.nr_method = NORI_METHOD_GET;
+      request_method = NORI_METHOD_GET;
     } else if (lws_hdr_total_length(wsi, WSI_TOKEN_POST_URI)) {
-      pss->nc_request.nr_method = NORI_METHOD_POST;
+      request_method = NORI_METHOD_POST;
     } else {
       nori_log_info("Unmanaged HTTP method");
       break;
@@ -100,12 +101,11 @@ static int lws_http_callback(
     // TODO: Return 414 if longer than the @in_path buffer size.
     char in_path[2048] = {'/'};
     lws_snprintf(in_path + 1, sizeof(in_path) - 1, "%s", (const char *)in);
-    struct nori_str_view request_path = nori_str_view_of(in_path);
 
     const struct lws_protocols *proto = lws_get_protocol(wsi);
     const struct nori_server *const server = proto->user;
     const struct nori_router *const route =
-        nori_router_match(server, pss->nc_request.nr_method, request_path);
+        nori_router_match(server, pss->nc_request.nr_method, nori_str_view_of(in_path));
 
     if (route == nullptr) {
       break;
@@ -118,8 +118,14 @@ static int lws_http_callback(
       break;
     }
 
-    pss->nc_route = *route;
-    pss->nc_request.nr_path = pss->nc_route.nr_path; // Route outlives the request.
+    pss->nc_route = route;
+
+    pss->nc_request.nr_method = request_method;
+    pss->nc_request.nr_path = pss->nc_route->nr_path;
+
+    // Default values.
+    pss->nc_response.nr_status = HTTP_STATUS_OK;
+    pss->nc_response.nr_content_type = NSV("text/html");
 
     lws_callback_on_writable(wsi);
 
