@@ -29,10 +29,17 @@ struct nori_flag *NORI_FLAG_OPTIONS[] = {
 // Router
 // ================================================================
 
-static struct nori_router route_static = {
+struct nori_status
+serve_static(struct nori_request request, struct nori_response *const response)
+{
+  return NORI_SUCCESS;
+}
+
+static struct nori_route route_static = {
     .nr_method = NORI_METHOD_GET,
     .nr_path = NSV("/static"),
-    .nr_next = nullptr};
+    .nr_next = nullptr,
+    .nr_callback = serve_static};
 
 struct nori_status
 serve_root(struct nori_request request, struct nori_response *const response)
@@ -40,7 +47,7 @@ serve_root(struct nori_request request, struct nori_response *const response)
   return NORI_SUCCESS;
 }
 
-static struct nori_router route_root = {
+static struct nori_route route_root = {
     .nr_method = NORI_METHOD_POST,
     .nr_path = NSV("/"),
     .nr_next = &route_static,
@@ -75,7 +82,7 @@ int main(int argc, const char *argv[argc])
   struct nori_config config = {};
   status = nori_config_load(FLAG_CONFIG.nf_vals[0], &config);
   if (!status.ns_success) {
-    goto cleanup;
+    goto done;
   }
 
   if (nori_str_view_eq(action, NSV("run"))) {
@@ -89,7 +96,6 @@ int main(int argc, const char *argv[argc])
     status = NORI_FAILURE;
   }
 
-cleanup:
-  nori_config_unload(&config);
+done:
   return status.ns_success ? EXIT_SUCCESS : EXIT_FAILURE;
 }

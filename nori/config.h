@@ -1,14 +1,12 @@
 #pragma once
 
-#include <lua5.4/lua.h>
-
 #include "nori/util.h"
 
 /// Server configuration parameters.
 struct nori_config {
-  unsigned long nc_log;  // The desired log level.
-  unsigned long nc_port; // The port to serve HTTP requests on.
-  lua_State *nc_state;   // Loaded configuration state.
+  unsigned long long nc_co_stack; // COROUTINE_STACK
+  unsigned long nc_log;           // LOG_LEVEL
+  unsigned long nc_port;          // PORT
 };
 
 /// Load the base configuration state.
@@ -22,6 +20,3 @@ struct nori_config {
 struct nori_status nori_config_load(
     const struct nori_str_view path,
     struct nori_config out[const static 1]);
-
-/// Clean up the supplied `struct nori_config` instance.
-struct nori_status nori_config_unload(struct nori_config config[const static 1]);

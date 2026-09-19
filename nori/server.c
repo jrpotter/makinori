@@ -4,6 +4,10 @@
 #include "nori/server.h"
 #include "nori/util.h"
 
+// ================================================================
+// Signaling
+// ================================================================
+
 static sig_atomic_t SERVER_RUNNING = 1;
 
 static void signal_server_stop(const int signal)
@@ -13,18 +17,57 @@ static void signal_server_stop(const int signal)
   }
 }
 
-struct nori_pss {
-  const struct nori_router *nc_route;
-  struct nori_request nc_request;
-  struct nori_response nc_response;
+// ================================================================
+// Responses
+// ================================================================
+
+struct nori_response {
+  // HTTP headers.
+  struct nori_str_view nr_content_length;
+  struct nori_str_view nr_content_type;
+  // HTTP status code.
+  unsigned int nr_status;
+  // FD of out buffer to write the response into.
+  int nr_fd;
+  // The lws context this response is associated with.
+  struct lws *const nr_wsi;
 };
 
-const struct nori_router *const nori_router_match(
+struct nori_status nori_response_set_header(
+    struct nori_response *const response,
+    enum nori_header header,
+    struct nori_str_view value)
+{
+  switch (header) {
+  case NORI_HEADER_CONTENT_LENGTH: {
+    response->nr_content_length = value;
+    break;
+  }
+  case NORI_HEADER_CONTENT_TYPE: {
+    response->nr_content_type = value;
+    break;
+  }
+  }
+  return NORI_SUCCESS;
+}
+
+struct nori_status
+nori_response_set_status(struct nori_response *const response, unsigned int status)
+{
+  response->nr_status = status;
+  return NORI_SUCCESS;
+}
+
+// ================================================================
+// Coroutines
+// ================================================================
+
+const struct nori_route *const nori_route_match(
     const struct nori_server server[const static 1],
     const enum nori_method method,
     const struct nori_str_view path)
 {
-  for (const struct nori_router *route = &server->router; route;
+  for (const struct nori_route *route = &server->router; route;
        route = route->nr_next) {
     nori_log_warn("%s, %s", route->nr_path.view, path.view);
     if (route->nr_method != method) {
@@ -39,6 +82,12 @@ const struct nori_router *const nori_router_match(
 
   return nullptr;
 }
+
+struct nori_pss {
+  struct nori_request nc_request;
+  struct nori_response nc_response;
+  char co_stack[]; // FAM representing the coroutine's stack.
+};
 
 static int lws_http_callback(
     struct lws *const wsi,
@@ -88,7 +137,7 @@ static int lws_http_callback(
 
     memset(pss, 0, sizeof(struct nori_pss));
 
-    enum nori_method request_method = NORI_METHOD_NONE;
+    enum nori_method request_method = NORI_METHOD_GET;
     if (lws_hdr_total_length(wsi, WSI_TOKEN_GET_URI)) {
       request_method = NORI_METHOD_GET;
     } else if (lws_hdr_total_length(wsi, WSI_TOKEN_POST_URI)) {
@@ -104,8 +153,8 @@ static int lws_http_callback(
 
     const struct lws_protocols *proto = lws_get_protocol(wsi);
     const struct nori_server *const server = proto->user;
-    const struct nori_router *const route =
-        nori_router_match(server, pss->nc_request.nr_method, nori_str_view_of(in_path));
+    const struct nori_route *const route =
+        nori_route_match(server, request_method, nori_str_view_of(in_path));
 
     if (route == nullptr) {
       break;
@@ -115,18 +164,20 @@ static int lws_http_callback(
       nori_log_warn(
           "No callback registered for path %s",
           route->nr_path.len == 0 ? "<EMPTY>" : route->nr_path.view);
+      // TODO: This should return a 500.
       break;
     }
 
-    pss->nc_route = route;
+    // Use the route's path since that will live beyond this frame.
+    pss->nc_request.nr_method = route->nr_method;
+    pss->nc_request.nr_path = route->nr_path;
 
-    pss->nc_request.nr_method = request_method;
-    pss->nc_request.nr_path = pss->nc_route->nr_path;
+    // TODO: Create a new ucontext with link back to main.
+    // TODO: Open a pipe.
+    // TODO: Initialize response state.
+    // TODO: Trigger callback.
 
-    // Default values.
-    pss->nc_response.nr_status = HTTP_STATUS_OK;
-    pss->nc_response.nr_content_type = NSV("text/html");
-
+    // Queues HTTP_BODY.* and HTTP_WRITEABLE callbacks.
     lws_callback_on_writable(wsi);
 
     return 0;
@@ -175,6 +226,10 @@ static int lws_http_callback(
   return lws_callback_http_dummy(wsi, reason, user, in, len);
 }
 
+// ================================================================
+// Entrypoint
+// ================================================================
+
 struct nori_status nori_server_run(struct nori_server server[static 1])
 {
   const struct sigaction act = {.sa_handler = signal_server_stop};
@@ -188,7 +243,7 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
       .callback = lws_http_callback,
       .id = 0,
       .user = server,
-      .per_session_data_size = sizeof(struct nori_pss),
+      .per_session_data_size = sizeof(struct nori_pss) + server->config.nc_co_stack,
       .rx_buffer_size = 0,
       .tx_packet_size = 0};
 

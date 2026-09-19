@@ -1,4 +1,11 @@
 assert(
+  type(COROUTINE_STACK) == 'number' and (
+    COROUTINE_STACK > 0
+  ),
+  'COROUTINE_STACK must be a positive integer'
+)
+
+assert(
   type(LOG_LEVEL) == 'string' and (
     LOG_LEVEL == 'debug' or
     LOG_LEVEL == 'info' or

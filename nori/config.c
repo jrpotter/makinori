@@ -60,6 +60,12 @@ struct nori_status nori_config_load(
   // Our verification script succeeded. Assume it's safe to access globals.
 
   {
+    lua_getglobal(L, "COROUTINE_STACK");
+    long long val = lua_tointeger(L, -1);
+    out->nc_co_stack = val;
+  }
+
+  {
     lua_getglobal(L, "LOG_LEVEL");
     size_t len = 0;
     struct nori_str_view val = nori_str_view_of(lua_tolstring(L, -1, &len));
@@ -85,22 +91,8 @@ struct nori_status nori_config_load(
     out->nc_port = val;
   }
 
-  {
-    out->nc_state = L;
-  }
-
+  lua_close(L);
   nori_set_log_level(out->nc_log);
-
-  return NORI_SUCCESS;
-}
-
-struct nori_status nori_config_unload(struct nori_config config[const static 1])
-{
-  lua_close(config->nc_state);
-
-  config->nc_state = nullptr;
-  config->nc_port = 0;
-  config->nc_log = 0;
 
   return NORI_SUCCESS;
 }
