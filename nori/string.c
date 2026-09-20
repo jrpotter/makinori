@@ -28,15 +28,33 @@ bool nori_str_view_eq(const struct nori_str_view s1, const struct nori_str_view 
   if (s1.len != s2.len) {
     return false;
   }
+
   const char *p = s1.view, *q = s2.view;
   for (; *p && *q; ++p, ++q) {
     if (*p != *q) {
       return false;
     }
   }
-  if (*p || *q) {
+
+  return true;
+}
+
+bool nori_str_view_ieq(const struct nori_str_view s1, const struct nori_str_view s2)
+{
+  if (s1.len != s2.len) {
     return false;
   }
+
+  const char *p = s1.view, *q = s2.view;
+  for (; *p && *q; ++p, ++q) {
+    char a = *p, b = *q;
+    a += (a >= 'A' && a <= 'Z') ? 'a' - 'A' : 0;
+    b += (b >= 'A' && b <= 'Z') ? 'a' - 'A' : 0;
+    if (a != b) {
+      return false;
+    }
+  }
+
   return true;
 }
 

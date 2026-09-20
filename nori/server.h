@@ -8,6 +8,13 @@ enum nori_method {
   NORI_METHOD_POST,
 };
 
+/// A representation of the supported HTTP status codes.
+enum nori_http_code {
+  NORI_HTTP_CODE_OK = 200,
+  NORI_HTTP_CODE_CREATED = 201,
+  NORI_HTTP_CODE_INTERNAL = 999,
+};
+
 /// An immutable HTTP request object.
 ///
 /// Instances of this `struct` are created by the server and supplied to
@@ -17,11 +24,6 @@ struct nori_request {
   struct nori_str_view nr_path;
 };
 
-enum nori_header {
-  NORI_HEADER_CONTENT_LENGTH,
-  NORI_HEADER_CONTENT_TYPE,
-};
-
 /// A mutable HTTP response object.
 ///
 /// Instances of this `struct` are created by the server and supplied to
@@ -29,15 +31,15 @@ enum nori_header {
 /// is responsible for updating the response in the callback function.
 struct nori_response;
 
+/// Set the HTTP status code.
+struct nori_status
+nori_response_set_code(struct nori_response *const, enum nori_http_code code);
+
 /// Set an HTTP header value.
 struct nori_status nori_response_set_header(
     struct nori_response *const,
-    enum nori_header header,
+    struct nori_str_view header,
     struct nori_str_view value);
-
-/// Set the HTTP status return code.
-struct nori_status
-nori_response_set_status(struct nori_response *const, unsigned int status);
 
 /// User-supplied callback registered within a `struct nori_route` instance.
 typedef struct nori_status

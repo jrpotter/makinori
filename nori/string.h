@@ -24,6 +24,9 @@ nori_str_view_suffix(const struct nori_str_view s, const size_t offset);
 /// Check if two string views are equal.
 bool nori_str_view_eq(const struct nori_str_view s1, const struct nori_str_view s2);
 
+/// Check if two string views are equal case-sensitively.
+bool nori_str_view_ieq(const struct nori_str_view s1, const struct nori_str_view s2);
+
 /// A dynamically allocated string.
 ///
 /// Generally speaking, we want to avoid dynamic allocation. But, when processing
