@@ -1,10 +1,11 @@
 CC = clang
-CFLAGS = -Wall -Werror -std=c23 -I. -Iincludes -MMD
+CFLAGS = -Wall -Werror -std=c23 -Iinclude -MMD
 CPPFLAGS = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=202405L -D_GNU_SOURCE
 LDFLAGS =
 LDLIBS = -llua5.4 -lwebsockets
 
-OBJS := $(patsubst %.c,%.o,$(wildcard **/*.c))
+OBJS := $(patsubst %.c,%.o,$(wildcard src/*.c))
+OBJS += $(patsubst %.c,%.o,$(wildcard src/nori/*.c))
 
 .PHONY: clean
 

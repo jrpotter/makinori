@@ -5,11 +5,11 @@
 #include "nori/util.h"
 
 static const char config_base[] = {
-#embed "nori/base.lua"
+#embed "./base.lua"
     , '\0'};
 
 static const char config_verify[] = {
-#embed "nori/verify.lua"
+#embed "./verify.lua"
     , '\0'};
 
 static constexpr struct nori_str_view LEVEL_ERROR = NSV("error");

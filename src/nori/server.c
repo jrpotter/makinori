@@ -34,24 +34,24 @@ static void signal_server_stop(const int signal)
 enum nori_response_state {
   // Initial state indicating the user is writing headers.
   // Set by the main context.
-  NORI_RESPONSE_STATE_HEADER,
+  NORI_RESPONSE_STATE_HEADER = 1,
   // State indicating the user is about to write to the body. Pending headers
   // should be flushed at this point.
   // Set by the user context.
-  NORI_RESPONSE_STATE_HEADER_FLUSH,
+  NORI_RESPONSE_STATE_HEADER_FLUSH = 2,
   // State indicating the user is writing to the body.
   // Set by the main context.
-  NORI_RESPONSE_STATE_BODY,
+  NORI_RESPONSE_STATE_BODY = 3,
   // State indicating the user is finished. Pending contents should be flushed
   // at this point.
   // Set by the user context.
-  NORI_RESPONSE_STATE_BODY_FLUSH,
+  NORI_RESPONSE_STATE_BODY_FLUSH = 4,
   // State indicating the user-defined callback has finished.
   // Set by the main context.
-  NORI_RESPONSE_STATE_CLOSING,
+  NORI_RESPONSE_STATE_CLOSING = 5,
   // State indicating the user-defined callback has finished.
   // Set by the main context.
-  NORI_RESPONSE_STATE_CLOSED,
+  NORI_RESPONSE_STATE_CLOSED = 6,
 };
 
 constexpr size_t MAX_PENDING_HEADERS = 8;
@@ -179,6 +179,10 @@ static void coro_wrapper(void)
 struct nori_status
 nori_response_set_code(struct nori_response *const r, enum nori_http_code code)
 {
+  if (r->nr_state > NORI_RESPONSE_STATE_HEADER) {
+    return NORI_FAILURE_ERROR("The header is no longer mutable");
+  }
+
   if (code == NORI_HTTP_CODE_INTERNAL) {
     return NORI_FAILURE_ERROR("Cannot use internal HTTP code");
   }
@@ -196,6 +200,10 @@ struct nori_status nori_response_set_header(
     struct nori_str_view header,
     struct nori_str_view value)
 {
+  if (r->nr_state > NORI_RESPONSE_STATE_HEADER) {
+    return NORI_FAILURE_ERROR("The header is no longer mutable");
+  }
+
   if (nori_str_view_ieq(header, NSV("Content-Type"))) {
     if (r->nr_common_type.len > 0) {
       return NORI_FAILURE_ERROR("Cannot specify Content-Type more than once");
