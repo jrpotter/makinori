@@ -346,8 +346,6 @@ static int lws_http_callback(
     enum nori_method request_method = NORI_METHOD_GET;
     if (lws_hdr_total_length(wsi, WSI_TOKEN_GET_URI)) {
       request_method = NORI_METHOD_GET;
-    } else if (lws_hdr_total_length(wsi, WSI_TOKEN_POST_URI)) {
-      request_method = NORI_METHOD_POST;
     } else { // TODO: Return a 500
       nori_log_error("Unmanaged HTTP method");
       goto lws_callback_http_cleanup;

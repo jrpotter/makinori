@@ -5,7 +5,6 @@
 /// A representation of supported HTTP methods.
 enum nori_method {
   NORI_METHOD_GET,
-  NORI_METHOD_POST,
 };
 
 /// A representation of the supported HTTP status codes.
