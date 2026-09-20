@@ -180,8 +180,7 @@ struct nori_status
 nori_response_set_code(struct nori_response *const r, enum nori_http_code code)
 {
   if (code == NORI_HTTP_CODE_INTERNAL) {
-    nori_log_error("Cannot use internal HTTP code");
-    return NORI_FAILURE;
+    return NORI_FAILURE_ERROR("Cannot use internal HTTP code");
   }
 
   if (r->nr_common_code == NORI_HTTP_CODE_INTERNAL) {
@@ -189,8 +188,7 @@ nori_response_set_code(struct nori_response *const r, enum nori_http_code code)
     return NORI_SUCCESS;
   }
 
-  nori_log_error("Cannot specify HTTP code more than once");
-  return NORI_FAILURE;
+  return NORI_FAILURE_ERROR("Cannot specify HTTP code more than once");
 }
 
 struct nori_status nori_response_set_header(
@@ -200,8 +198,7 @@ struct nori_status nori_response_set_header(
 {
   if (nori_str_view_ieq(header, NSV("Content-Type"))) {
     if (r->nr_common_type.len > 0) {
-      nori_log_error("Cannot specify Content-Type more than once");
-      return NORI_FAILURE;
+      return NORI_FAILURE_ERROR("Cannot specify Content-Type more than once");
     }
     r->nr_common_type = value;
     return NORI_SUCCESS;
@@ -209,8 +206,7 @@ struct nori_status nori_response_set_header(
 
   if (nori_str_view_ieq(header, NSV("Content-Length"))) {
     if (r->nr_common_length.len > 0) {
-      nori_log_error("Cannot specify Content-Length more than once");
-      return NORI_FAILURE;
+      return NORI_FAILURE_ERROR("Cannot specify Content-Length more than once");
     }
     r->nr_common_length = value;
     return NORI_SUCCESS;
@@ -363,8 +359,7 @@ static struct nori_status nori_write_lws_common(
   lws_filepos_t content_len = LWS_ILLEGAL_HTTP_CONTENT_LEN;
 
   if (lws_add_http_common_headers(wsi, code, content_type, content_len, p, end)) {
-    nori_log_error("Could not write common headers");
-    return NORI_FAILURE;
+    return NORI_FAILURE_ERROR("Could not write common headers");
   }
 
   return NORI_SUCCESS;
@@ -543,8 +538,7 @@ static int lws_http_callback(
         if (lws_add_http_header_by_name(
                 wsi, (const unsigned char *)header.view,
                 (const unsigned char *)value.view, value.len, &p, end)) {
-          nori_log_error("Could not write header %s", header.view);
-          status = NORI_FAILURE;
+          status = NORI_FAILURE_ERROR("Could not write header %s", header.view);
           goto lws_callback_http_writeable_cleanup;
         }
       }
@@ -553,8 +547,7 @@ static int lws_http_callback(
       // Advance state machine.
       if (r->nr_state == NORI_RESPONSE_STATE_HEADER_FLUSH) {
         if (lws_finalize_write_http_header(wsi, start, &p, end)) {
-          nori_log_error("Could not finalize http headers");
-          status = NORI_FAILURE;
+          status = NORI_FAILURE_ERROR("Could not finalize http headers");
           goto lws_callback_http_writeable_cleanup;
         }
         nori_log_debug("Transitioned from HEADER_FLUSH to BODY");
@@ -564,7 +557,6 @@ static int lws_http_callback(
       status = coro_resume(r);
       if (!status.ns_success) {
         nori_log_error("Could not resume coroutine");
-        status = NORI_FAILURE;
         goto lws_callback_http_writeable_cleanup;
       }
 
@@ -598,8 +590,7 @@ static int lws_http_callback(
         if (lws_write(
                 wsi, start, lws_ptr_diff_size_t(p, start), LWS_WRITE_HTTP_FINAL) !=
             lws_ptr_diff(p, start)) {
-          nori_log_error("Could not write to body");
-          status = NORI_FAILURE;
+          status = NORI_FAILURE_ERROR("Could not write to body");
           goto lws_callback_http_writeable_cleanup;
         }
         nori_log_debug("Transitioned from BODY_FLUSH to CLOSING");
@@ -609,7 +600,6 @@ static int lws_http_callback(
       status = coro_resume(r);
       if (!status.ns_success) {
         nori_log_error("Could not resume coroutine");
-        status = NORI_FAILURE;
         goto lws_callback_http_writeable_cleanup;
       }
 
@@ -669,8 +659,7 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
   const struct sigaction act = {.sa_handler = signal_server_stop};
   if (sigaction(SIGINT, &act, nullptr) == -1) {
     perror("sigaction");
-    nori_log_error("Could not install interrupt handler");
-    return NORI_FAILURE;
+    return NORI_FAILURE_ERROR("Could not install interrupt handler");
   };
 
   const struct lws_protocols http_protocol = {
@@ -702,14 +691,12 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
 
   struct lws_context *context = lws_create_context(&info);
   if (!context) {
-    nori_log_error("Could not create lws context");
-    return NORI_FAILURE;
+    return NORI_FAILURE_ERROR("Could not create lws context");
   }
 
   struct lws_vhost *vh = lws_create_vhost(context, &info);
   if (!vh) {
-    nori_log_error("Could not create lws vhost");
-    return NORI_FAILURE;
+    return NORI_FAILURE_ERROR("Could not create lws vhost");
   }
 
   nori_log_notice("Starting server on port %ld", server->config.nc_port);
