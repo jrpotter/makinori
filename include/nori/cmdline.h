@@ -67,6 +67,6 @@ extern struct nori_flag *NORI_FLAG_OPTIONS[];
 /// @out_param out_action - A reference to the single positional argument.
 /// @return - `struct nori_status` indicating successful parsing.
 struct nori_status nori_cmdline_parse(
-    const int argc,
-    const char *argv[const argc],
+    int const argc,
+    char const *argv[const argc],
     struct nori_str_view out[static 1]);

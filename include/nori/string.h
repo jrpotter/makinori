@@ -5,7 +5,7 @@
 
 /// An immutable pointer to an existing string.
 struct nori_str_view {
-  const char *view;
+  char const *view;
   size_t len;
 };
 
@@ -15,17 +15,17 @@ struct nori_str_view {
 /// Construct a `struct nori_str_view` instance pointing to @ss.
 ///
 /// In general, prefer using the `NSV` macro for compile-time construction.
-struct nori_str_view nori_str_view_of(const char ss[static 1]);
+struct nori_str_view nori_str_view_of(char const ss[static 1]);
 
 /// Create a new string view corresponding to the suffix of another.
 struct nori_str_view
-nori_str_view_suffix(const struct nori_str_view s, const size_t offset);
+nori_str_view_suffix(struct nori_str_view const s, size_t const offset);
 
 /// Check if two string views are equal.
-bool nori_str_view_eq(const struct nori_str_view s1, const struct nori_str_view s2);
+bool nori_str_view_eq(struct nori_str_view const s1, struct nori_str_view const s2);
 
 /// Check if two string views are equal case-sensitively.
-bool nori_str_view_ieq(const struct nori_str_view s1, const struct nori_str_view s2);
+bool nori_str_view_ieq(struct nori_str_view const s1, struct nori_str_view const s2);
 
 /// A dynamically allocated string.
 ///
@@ -39,7 +39,7 @@ struct nori_str {
 
 /// Create a new `struct nori_str` instance with initial @capacity.
 struct nori_status
-nori_str_create(const size_t capacity, struct nori_str out[const static 1]);
+nori_str_create(size_t const capacity, struct nori_str out[const static 1]);
 
 // Copy a `struct nori_str_view` into a `struct nori_str`.
 //

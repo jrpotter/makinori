@@ -3,17 +3,17 @@
 #include "nori/string.h"
 #include "nori/util.h"
 
-struct nori_str_view nori_str_view_of(const char ss[static 1])
+struct nori_str_view nori_str_view_of(char const ss[static 1])
 {
   size_t len = 0;
-  for (const char *p = ss; *p; ++p) {
+  for (char const *p = ss; *p; ++p) {
     len += 1;
   }
   return (struct nori_str_view){.view = ss, .len = len};
 }
 
 struct nori_str_view
-nori_str_view_suffix(const struct nori_str_view s, const size_t offset)
+nori_str_view_suffix(struct nori_str_view const s, size_t const offset)
 {
   struct nori_str_view suffix = {};
   if (offset < s.len) {
@@ -23,13 +23,13 @@ nori_str_view_suffix(const struct nori_str_view s, const size_t offset)
   return suffix;
 }
 
-bool nori_str_view_eq(const struct nori_str_view s1, const struct nori_str_view s2)
+bool nori_str_view_eq(struct nori_str_view const s1, struct nori_str_view const s2)
 {
   if (s1.len != s2.len) {
     return false;
   }
 
-  const char *p = s1.view, *q = s2.view;
+  char const *p = s1.view, *q = s2.view;
   for (; *p && *q; ++p, ++q) {
     if (*p != *q) {
       return false;
@@ -39,13 +39,13 @@ bool nori_str_view_eq(const struct nori_str_view s1, const struct nori_str_view 
   return true;
 }
 
-bool nori_str_view_ieq(const struct nori_str_view s1, const struct nori_str_view s2)
+bool nori_str_view_ieq(struct nori_str_view const s1, struct nori_str_view const s2)
 {
   if (s1.len != s2.len) {
     return false;
   }
 
-  const char *p = s1.view, *q = s2.view;
+  char const *p = s1.view, *q = s2.view;
   for (; *p && *q; ++p, ++q) {
     char a = *p, b = *q;
     a += (a >= 'A' && a <= 'Z') ? 'a' - 'A' : 0;
@@ -59,7 +59,7 @@ bool nori_str_view_ieq(const struct nori_str_view s1, const struct nori_str_view
 }
 
 struct nori_status
-nori_str_create(const size_t capacity, struct nori_str out[const static 1])
+nori_str_create(size_t const capacity, struct nori_str out[const static 1])
 {
   memset(out, 0, sizeof(*out));
 

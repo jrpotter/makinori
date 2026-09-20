@@ -4,21 +4,21 @@
 #include "nori/config.h"
 #include "nori/util.h"
 
-static const char config_base[] = {
+static char const config_base[] = {
 #embed "./base.lua"
     , '\0'};
 
-static const char config_verify[] = {
+static char const config_verify[] = {
 #embed "./verify.lua"
     , '\0'};
 
-static constexpr struct nori_str_view LEVEL_ERROR = NSV("error");
-static constexpr struct nori_str_view LEVEL_WARN = NSV("warn");
-static constexpr struct nori_str_view LEVEL_NOTICE = NSV("notice");
-static constexpr struct nori_str_view LEVEL_INFO = NSV("info");
+static struct nori_str_view constexpr LEVEL_ERROR = NSV("error");
+static struct nori_str_view constexpr LEVEL_WARN = NSV("warn");
+static struct nori_str_view constexpr LEVEL_NOTICE = NSV("notice");
+static struct nori_str_view constexpr LEVEL_INFO = NSV("info");
 
 struct nori_status nori_config_load(
-    const struct nori_str_view path,
+    struct nori_str_view const path,
     struct nori_config out[const static 1])
 {
   memset(out, 0, sizeof(*out));

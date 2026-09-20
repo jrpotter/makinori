@@ -31,19 +31,9 @@ struct nori_request {
 /// is responsible for updating the response in the callback function.
 struct nori_response;
 
-/// Set the HTTP status code.
-struct nori_status
-nori_response_set_code(struct nori_response *const, enum nori_http_code code);
-
-/// Set an HTTP header value.
-struct nori_status nori_response_set_header(
-    struct nori_response *const,
-    struct nori_str_view header,
-    struct nori_str_view value);
-
 /// User-supplied callback registered within a `struct nori_route` instance.
 typedef struct nori_status
-nori_route_callback_t(const struct nori_request, struct nori_response *const);
+nori_route_callback_t(struct nori_request const, struct nori_response *const);
 
 /// Route callback registration.
 ///
@@ -80,6 +70,22 @@ struct nori_server {
   struct nori_config config;
   struct nori_route router;
 };
+
+/// Set the HTTP status code.
+struct nori_status
+nori_response_set_code(struct nori_response *const, enum nori_http_code code);
+
+/// Set an HTTP header value.
+struct nori_status nori_response_set_header(
+    struct nori_response *const,
+    struct nori_str_view header,
+    struct nori_str_view value);
+
+/// Write @buffer into the response body.
+struct nori_status nori_response_write(
+    struct nori_response *const,
+    char buffer[const static 1],
+    size_t const len);
 
 /// Entrypoint to start the server.
 ///

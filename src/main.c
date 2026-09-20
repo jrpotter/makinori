@@ -59,7 +59,7 @@ static struct nori_route route_root = {
 // Main
 // ================================================================
 
-int main(int argc, const char *argv[argc])
+int main(int argc, char const *argv[argc])
 {
   struct nori_status status = nori_init();
   if (!status.ns_success) {

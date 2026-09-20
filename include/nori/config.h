@@ -23,5 +23,5 @@ struct nori_config {
 /// @param path The path of a user-supplied configuration file. Ignored if empty.
 /// @param out  The struct nori_config to initialize.
 struct nori_status nori_config_load(
-    const struct nori_str_view path,
+    struct nori_str_view const path,
     struct nori_config out[const static 1]);

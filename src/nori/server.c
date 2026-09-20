@@ -18,7 +18,7 @@
 
 static sig_atomic_t SERVER_RUNNING = 1;
 
-static void signal_server_stop(const int signal)
+static void signal_server_stop(int const signal)
 {
   if (signal == SIGINT) {
     SERVER_RUNNING = 0;
@@ -54,7 +54,7 @@ enum nori_response_state {
   NORI_RESPONSE_STATE_CLOSED = 6,
 };
 
-constexpr size_t MAX_PENDING_HEADERS = 8;
+size_t constexpr MAX_PENDING_HEADERS = 8;
 
 struct nori_response {
   // The lws context this response is associated with.
@@ -64,25 +64,25 @@ struct nori_response {
   // how to do so. This utility seems to update private state that other
   // functions do not touch. As a workaround, save the fields needed by
   // `lws_add_http_common_headers` separately.
-  enum nori_http_code nr_common_code;
-  struct nori_str_view nr_common_type;
-  struct nori_str_view nr_common_length;
-  bool nr_common_flushed;
+  enum nori_http_code volatile nr_common_code;
+  struct nori_str_view volatile nr_common_type;
+  struct nori_str_view volatile nr_common_length;
+  bool volatile nr_common_flushed;
   // A reference to the HTTP header that needs to be written out. Switch back to
   // the main context when this buffer is full so we can flush it.
-  size_t nr_pending_headers_count;
+  size_t volatile nr_pending_headers_count;
   struct {
     struct nori_str_view nr_key;
     struct nori_str_view nr_val;
-  } nr_pending_headers[MAX_PENDING_HEADERS];
+  } volatile nr_pending_headers[MAX_PENDING_HEADERS];
   // FD of in/out buffers to read/write the response into.
-  int nr_fd_in;
-  int nr_fd_out;
+  int volatile nr_fd_in;
+  int volatile nr_fd_out;
   // The return status of the user-defined callback.
-  struct nori_status nr_result;
+  struct nori_status volatile nr_result;
   // The coroutine context and a flag indicating its current state.
   struct ucontext_t *nr_context;
-  enum nori_response_state nr_state;
+  enum nori_response_state volatile nr_state;
   // FAM representing the coroutine's stack.
   char nr_co_stack[];
 };
@@ -102,7 +102,7 @@ static thread_local ucontext_t context_main;
 // callback expects the request/response pair introduced in the current
 // transaction's PSS. Use this to temporarily hold the value for @coro_wrapper
 // to reference.
-static thread_local struct nori_pss *coro_pss;
+static thread_local struct nori_pss *volatile coro_pss;
 
 static struct nori_status coro_suspend(struct nori_response *const r)
 {
@@ -128,113 +128,48 @@ static void coro_wrapper(void)
   struct nori_pss *pss = coro_pss;
   coro_pss = nullptr;
 
-  struct nori_response *const r = &pss->nc_response;
-  r->nr_result = pss->nc_callback(pss->nc_request, r);
+  struct nori_response *const res = &pss->nc_response;
+  res->nr_result = pss->nc_callback(pss->nc_request, res);
 
   // Finishing transitioning through the state machine. It's possible the
   // user-defined callback does nothing at all in which case we are at the first
   // state.
 
-  if (r->nr_state == NORI_RESPONSE_STATE_HEADER) {
+  if (res->nr_state == NORI_RESPONSE_STATE_HEADER) {
     nori_log_debug("Transitioning from HEADER to HEADER_FLUSH");
-    r->nr_state = NORI_RESPONSE_STATE_HEADER_FLUSH;
-    struct nori_status status = coro_suspend(r);
+    res->nr_state = NORI_RESPONSE_STATE_HEADER_FLUSH;
+    struct nori_status status = coro_suspend(res);
     if (!status.ns_success) {
       nori_log_error("Could not suspend coroutine");
       return;
     }
   }
 
-  if (r->nr_state == NORI_RESPONSE_STATE_HEADER_FLUSH) {
-    struct nori_status status = coro_suspend(r);
+  if (res->nr_state == NORI_RESPONSE_STATE_HEADER_FLUSH) {
+    struct nori_status status = coro_suspend(res);
     if (!status.ns_success) {
       nori_log_error("Could not suspend coroutine");
       return;
     }
   }
 
-  if (r->nr_state == NORI_RESPONSE_STATE_BODY) {
+  if (res->nr_state == NORI_RESPONSE_STATE_BODY) {
     nori_log_debug("Transitioning from BODY to BODY_FLUSH");
-    r->nr_state = NORI_RESPONSE_STATE_BODY_FLUSH;
-    struct nori_status status = coro_suspend(r);
+    res->nr_state = NORI_RESPONSE_STATE_BODY_FLUSH;
+    struct nori_status status = coro_suspend(res);
     if (!status.ns_success) {
       nori_log_error("Could not suspend coroutine");
       return;
     }
   }
 
-  if (r->nr_state == NORI_RESPONSE_STATE_BODY_FLUSH) {
-    struct nori_status status = coro_suspend(r);
+  if (res->nr_state == NORI_RESPONSE_STATE_BODY_FLUSH) {
+    struct nori_status status = coro_suspend(res);
     if (!status.ns_success) {
       nori_log_error("Could not suspend coroutine");
       return;
     }
   }
-}
-
-// ================================================================
-// Responses
-// ================================================================
-
-struct nori_status
-nori_response_set_code(struct nori_response *const r, enum nori_http_code code)
-{
-  if (r->nr_state > NORI_RESPONSE_STATE_HEADER) {
-    return NORI_FAILURE_ERROR("The header is no longer mutable");
-  }
-
-  if (code == NORI_HTTP_CODE_INTERNAL) {
-    return NORI_FAILURE_ERROR("Cannot use internal HTTP code");
-  }
-
-  if (r->nr_common_code == NORI_HTTP_CODE_INTERNAL) {
-    r->nr_common_code = code;
-    return NORI_SUCCESS;
-  }
-
-  return NORI_FAILURE_ERROR("Cannot specify HTTP code more than once");
-}
-
-struct nori_status nori_response_set_header(
-    struct nori_response *const r,
-    struct nori_str_view header,
-    struct nori_str_view value)
-{
-  if (r->nr_state > NORI_RESPONSE_STATE_HEADER) {
-    return NORI_FAILURE_ERROR("The header is no longer mutable");
-  }
-
-  if (nori_str_view_ieq(header, NSV("Content-Type"))) {
-    if (r->nr_common_type.len > 0) {
-      return NORI_FAILURE_ERROR("Cannot specify Content-Type more than once");
-    }
-    r->nr_common_type = value;
-    return NORI_SUCCESS;
-  }
-
-  if (nori_str_view_ieq(header, NSV("Content-Length"))) {
-    if (r->nr_common_length.len > 0) {
-      return NORI_FAILURE_ERROR("Cannot specify Content-Length more than once");
-    }
-    r->nr_common_length = value;
-    return NORI_SUCCESS;
-  }
-
-  assert(r->nr_pending_headers_count < MAX_PENDING_HEADERS);
-  r->nr_pending_headers[r->nr_pending_headers_count].nr_key = header;
-  r->nr_pending_headers[r->nr_pending_headers_count].nr_val = value;
-  r->nr_pending_headers_count += 1;
-
-  // Must suspend at this point to flush headers.
-  if (r->nr_pending_headers_count == MAX_PENDING_HEADERS) {
-    struct nori_status status = coro_suspend(r);
-    if (!status.ns_success) {
-      nori_log_error("Could not suspend coroutine");
-      return status;
-    }
-  }
-
-  return NORI_SUCCESS;
 }
 
 // ================================================================
@@ -316,22 +251,22 @@ static void nori_log_callback(enum lws_callback_reasons reason)
   }
 }
 
-// LWS's documentation is...lacking. From what I can tell, any nonzero value
-// indicates closing the connection.
-constexpr int LWS_CONTINUE = 0;
-constexpr int LWS_CLOSE = -1;
-
 // Size of the outbound buffer. Avoid making too large since otherwise LWS in
 // turn has to buffer any remaining value, requiring additional heap allocations
 // and generally slower processing.
-constexpr ssize_t BUFFER_SIZE = 4096;
+ssize_t constexpr BUFFER_SIZE = 4096;
 
-const struct nori_route *const nori_route_match(
-    const struct nori_server server[const static 1],
-    const enum nori_method method,
-    const struct nori_str_view path)
+// LWS's documentation is...lacking. From what I can tell, any nonzero value
+// indicates closing the connection.
+int constexpr LWS_CONTINUE = 0;
+int constexpr LWS_CLOSE = -1;
+
+struct nori_route const *const nori_route_match(
+    struct nori_server const server[const static 1],
+    enum nori_method const method,
+    struct nori_str_view const path)
 {
-  for (const struct nori_route *route = &server->router; route;
+  for (struct nori_route const *route = &server->router; route;
        route = route->nr_next) {
     nori_log_warn("%s, %s", route->nr_path.view, path.view);
     if (route->nr_method != method) {
@@ -358,7 +293,7 @@ static struct nori_status nori_write_lws_common(
     code = r->nr_common_code;
   }
 
-  const char *content_type = "text/html";
+  char const *content_type = "text/html";
   if (r->nr_common_type.len > 0) {
     content_type = r->nr_common_type.view;
   }
@@ -384,6 +319,8 @@ static int lws_http_callback(
 
   struct nori_pss *pss = user;
   struct nori_status status = {};
+  struct nori_request *const req = &pss->nc_request;
+  struct nori_response *const res = &pss->nc_response;
 
   // Ordered in roughly the order the callbacks are triggered.
   switch (reason) {
@@ -394,8 +331,8 @@ static int lws_http_callback(
     // Setup
     // ----------------------------------------------------------------
 
-    const struct lws_protocols *proto = lws_get_protocol(wsi);
-    const struct nori_server *const server = proto->user;
+    struct lws_protocols const *proto = lws_get_protocol(wsi);
+    struct nori_server const *const server = proto->user;
     memset(pss, 0, sizeof(struct nori_pss) + server->config.nc_co_stack);
 
     // Resources that need to be potentially cleaned up on error.
@@ -416,9 +353,9 @@ static int lws_http_callback(
     }
 
     char in_path[2048] = {'/'}; // TODO: Return 414 if longer than buffer.
-    lws_snprintf(in_path + 1, sizeof(in_path) - 1, "%s", (const char *)in);
+    lws_snprintf(in_path + 1, sizeof(in_path) - 1, "%s", (char const *)in);
 
-    const struct nori_route *const route =
+    struct nori_route const *const route =
         nori_route_match(server, request_method, nori_str_view_of(in_path));
 
     if (route == nullptr) { // TODO: This should return a 404.
@@ -434,8 +371,8 @@ static int lws_http_callback(
 
     // Use the route's values since they live outside this frame.
     pss->nc_callback = route->nr_callback;
-    pss->nc_request.nr_method = route->nr_method;
-    pss->nc_request.nr_path = route->nr_path;
+    req->nr_method = route->nr_method;
+    req->nr_path = route->nr_path;
 
     // ----------------------------------------------------------------
     // Response
@@ -447,16 +384,16 @@ static int lws_http_callback(
       goto lws_callback_http_cleanup;
     }
 
-    pss->nc_response.nr_wsi = wsi;
-    pss->nc_response.nr_common_code = NORI_HTTP_CODE_INTERNAL;
-    pss->nc_response.nr_common_length = NSV("");
-    pss->nc_response.nr_common_type = NSV("");
-    pss->nc_response.nr_common_flushed = false;
-    pss->nc_response.nr_pending_headers_count = 0;
-    // pss->nc_response.nr_pending_headers = {};
-    pss->nc_response.nr_fd_in = pipefd[0];
-    pss->nc_response.nr_fd_out = pipefd[1];
-    pss->nc_response.nr_result = NORI_FAILURE;
+    res->nr_wsi = wsi;
+    res->nr_common_code = NORI_HTTP_CODE_INTERNAL;
+    res->nr_common_length = NSV("");
+    res->nr_common_type = NSV("");
+    res->nr_common_flushed = false;
+    res->nr_pending_headers_count = 0;
+    // r->nr_pending_headers = {};
+    res->nr_fd_in = pipefd[0];
+    res->nr_fd_out = pipefd[1];
+    res->nr_result = NORI_FAILURE;
 
     // ----------------------------------------------------------------
     // Coroutine setup
@@ -469,16 +406,16 @@ static int lws_http_callback(
       goto lws_callback_http_cleanup;
     }
 
-    context_coro.uc_stack.ss_sp = pss->nc_response.nr_co_stack;
+    context_coro.uc_stack.ss_sp = res->nr_co_stack;
     context_coro.uc_stack.ss_size = server->config.nc_co_stack;
     context_coro.uc_link = &context_main;
     makecontext(&context_coro, coro_wrapper, 0);
 
-    pss->nc_response.nr_context = &context_coro;
-    pss->nc_response.nr_state = NORI_RESPONSE_STATE_HEADER;
+    res->nr_context = &context_coro;
+    res->nr_state = NORI_RESPONSE_STATE_HEADER;
     coro_pss = pss; // Set before context switch.
 
-    status = coro_resume(&pss->nc_response);
+    status = coro_resume(res);
     if (!status.ns_success) {
       nori_log_error("Could not resume coroutine");
       goto lws_callback_http_cleanup;
@@ -518,51 +455,49 @@ static int lws_http_callback(
     // Write HTTP
     // ----------------------------------------------------------------
 
-    struct nori_response *const r = &pss->nc_response;
-
     uint8_t buffer[BUFFER_SIZE]; // HTTP does not need LWS_PRE
     uint8_t *start = buffer;
     uint8_t *p = start;
     uint8_t *end = buffer + sizeof(buffer) - 1;
 
-    switch (pss->nc_response.nr_state) {
+    switch (res->nr_state) {
     case NORI_RESPONSE_STATE_HEADER:
     case NORI_RESPONSE_STATE_HEADER_FLUSH: {
-      if (!r->nr_common_flushed &&
-          (pss->nc_response.nr_state == NORI_RESPONSE_STATE_HEADER_FLUSH ||
-           (r->nr_common_code != NORI_HTTP_CODE_INTERNAL && r->nr_common_type.len > 0 &&
-            r->nr_common_length.len > 0))) {
-        status = nori_write_lws_common(wsi, &pss->nc_response, &p, end);
+      if (!res->nr_common_flushed &&
+          (res->nr_state == NORI_RESPONSE_STATE_HEADER_FLUSH ||
+           (res->nr_common_code != NORI_HTTP_CODE_INTERNAL &&
+            res->nr_common_type.len > 0 && res->nr_common_length.len > 0))) {
+        status = nori_write_lws_common(wsi, res, &p, end);
         if (!status.ns_success) {
           nori_log_error("Could not write common headers");
           goto lws_callback_http_writeable_cleanup;
         }
-        r->nr_common_flushed = true;
+        res->nr_common_flushed = true;
       }
 
-      for (size_t i = 0; i < r->nr_pending_headers_count; ++i) {
-        struct nori_str_view header = r->nr_pending_headers[i].nr_key;
-        struct nori_str_view value = r->nr_pending_headers[i].nr_val;
+      for (size_t i = 0; i < res->nr_pending_headers_count; ++i) {
+        struct nori_str_view header = res->nr_pending_headers[i].nr_key;
+        struct nori_str_view value = res->nr_pending_headers[i].nr_val;
         if (lws_add_http_header_by_name(
-                wsi, (const unsigned char *)header.view,
-                (const unsigned char *)value.view, value.len, &p, end)) {
+                wsi, (unsigned char const *)header.view,
+                (unsigned char const *)value.view, value.len, &p, end)) {
           status = NORI_FAILURE_ERROR("Could not write header %s", header.view);
           goto lws_callback_http_writeable_cleanup;
         }
       }
-      r->nr_pending_headers_count = 0;
+      res->nr_pending_headers_count = 0;
 
       // Advance state machine.
-      if (r->nr_state == NORI_RESPONSE_STATE_HEADER_FLUSH) {
+      if (res->nr_state == NORI_RESPONSE_STATE_HEADER_FLUSH) {
         if (lws_finalize_write_http_header(wsi, start, &p, end)) {
           status = NORI_FAILURE_ERROR("Could not finalize http headers");
           goto lws_callback_http_writeable_cleanup;
         }
         nori_log_debug("Transitioned from HEADER_FLUSH to BODY");
-        r->nr_state = NORI_RESPONSE_STATE_BODY;
+        res->nr_state = NORI_RESPONSE_STATE_BODY;
       }
 
-      status = coro_resume(r);
+      status = coro_resume(res);
       if (!status.ns_success) {
         nori_log_error("Could not resume coroutine");
         goto lws_callback_http_writeable_cleanup;
@@ -594,7 +529,7 @@ static int lws_http_callback(
       // }
 
       // Advance state machine.
-      if (r->nr_state == NORI_RESPONSE_STATE_BODY_FLUSH) {
+      if (res->nr_state == NORI_RESPONSE_STATE_BODY_FLUSH) {
         if (lws_write(
                 wsi, start, lws_ptr_diff_size_t(p, start), LWS_WRITE_HTTP_FINAL) !=
             lws_ptr_diff(p, start)) {
@@ -602,16 +537,16 @@ static int lws_http_callback(
           goto lws_callback_http_writeable_cleanup;
         }
         nori_log_debug("Transitioned from BODY_FLUSH to CLOSING");
-        r->nr_state = NORI_RESPONSE_STATE_CLOSING;
+        res->nr_state = NORI_RESPONSE_STATE_CLOSING;
       }
 
-      status = coro_resume(r);
+      status = coro_resume(res);
       if (!status.ns_success) {
         nori_log_error("Could not resume coroutine");
         goto lws_callback_http_writeable_cleanup;
       }
 
-      if (r->nr_state != NORI_RESPONSE_STATE_CLOSING) {
+      if (res->nr_state != NORI_RESPONSE_STATE_CLOSING) {
         lws_callback_on_writable(wsi);
         return LWS_CONTINUE;
       }
@@ -621,7 +556,7 @@ static int lws_http_callback(
     case NORI_RESPONSE_STATE_CLOSING: {
       if (lws_http_transaction_completed(wsi)) {
         nori_log_debug("Transitioning from CLOSING to CLOSED");
-        r->nr_state = NORI_RESPONSE_STATE_CLOSED;
+        res->nr_state = NORI_RESPONSE_STATE_CLOSED;
       }
 
       // Otherwise keep the connection open. LWS is responsible for logically
@@ -636,17 +571,17 @@ static int lws_http_callback(
     }
 
   lws_callback_http_writeable_cleanup:
-    if (r->nr_fd_in && close(r->nr_fd_in) == -1) {
+    if (res->nr_fd_in && close(res->nr_fd_in) == -1) {
       perror("close fd_in");
     }
-    r->nr_fd_in = 0;
+    res->nr_fd_in = 0;
 
-    if (r->nr_fd_out && close(r->nr_fd_out) == -1) {
+    if (res->nr_fd_out && close(res->nr_fd_out) == -1) {
       perror("close fd_out");
     }
-    r->nr_fd_out = 0;
+    res->nr_fd_out = 0;
 
-    return r->nr_state == NORI_RESPONSE_STATE_CLOSED ? LWS_CLOSE : LWS_CONTINUE;
+    return res->nr_state == NORI_RESPONSE_STATE_CLOSED ? LWS_CLOSE : LWS_CONTINUE;
   }
 
   default: {
@@ -659,18 +594,108 @@ static int lws_http_callback(
 }
 
 // ================================================================
+// Responses
+// ================================================================
+
+struct nori_status
+nori_response_set_code(struct nori_response *const r, enum nori_http_code code)
+{
+  if (r->nr_state > NORI_RESPONSE_STATE_HEADER) {
+    return NORI_FAILURE_ERROR("The header is no longer mutable");
+  }
+
+  if (code == NORI_HTTP_CODE_INTERNAL) {
+    return NORI_FAILURE_ERROR("Cannot use internal HTTP code");
+  }
+
+  if (r->nr_common_code == NORI_HTTP_CODE_INTERNAL) {
+    r->nr_common_code = code;
+    return NORI_SUCCESS;
+  }
+
+  return NORI_FAILURE_ERROR("Cannot specify HTTP code more than once");
+}
+
+struct nori_status nori_response_set_header(
+    struct nori_response *const r,
+    struct nori_str_view header,
+    struct nori_str_view value)
+{
+  if (r->nr_state != NORI_RESPONSE_STATE_HEADER) {
+    return NORI_FAILURE_ERROR("The header is no longer mutable");
+  }
+
+  if (nori_str_view_ieq(header, NSV("Content-Type"))) {
+    if (r->nr_common_type.len > 0) {
+      return NORI_FAILURE_ERROR("Cannot specify Content-Type more than once");
+    }
+    r->nr_common_type = value;
+    return NORI_SUCCESS;
+  }
+
+  if (nori_str_view_ieq(header, NSV("Content-Length"))) {
+    if (r->nr_common_length.len > 0) {
+      return NORI_FAILURE_ERROR("Cannot specify Content-Length more than once");
+    }
+    r->nr_common_length = value;
+    return NORI_SUCCESS;
+  }
+
+  assert(r->nr_pending_headers_count < MAX_PENDING_HEADERS);
+  r->nr_pending_headers[r->nr_pending_headers_count].nr_key = header;
+  r->nr_pending_headers[r->nr_pending_headers_count].nr_val = value;
+  r->nr_pending_headers_count += 1;
+
+  // Must suspend at this point to flush headers.
+  if (r->nr_pending_headers_count == MAX_PENDING_HEADERS) {
+    struct nori_status status = coro_suspend(r);
+    if (!status.ns_success) {
+      nori_log_error("Could not suspend coroutine");
+      return status;
+    }
+  }
+
+  return NORI_SUCCESS;
+}
+
+struct nori_status nori_response_write(
+    struct nori_response *const r,
+    char buffer[const static 1],
+    size_t const len)
+{
+  if (r->nr_state == NORI_RESPONSE_STATE_HEADER) {
+    nori_log_debug("Transitioning from HEADER to HEADER_FLUSH");
+    r->nr_state = NORI_RESPONSE_STATE_HEADER_FLUSH;
+    struct nori_status status = coro_suspend(r);
+    if (!status.ns_success) {
+      nori_log_error("Could not suspend coroutine");
+      return status;
+    }
+    assert(r->nr_state == NORI_RESPONSE_STATE_BODY);
+  }
+
+  if (r->nr_state != NORI_RESPONSE_STATE_BODY) {
+    return NORI_FAILURE_ERROR("The body is currently immutable");
+  }
+
+  // TODO: Write responses.
+
+  return NORI_SUCCESS;
+}
+
+// ================================================================
 // Entrypoint
 // ================================================================
 
 struct nori_status nori_server_run(struct nori_server server[static 1])
 {
-  const struct sigaction act = {.sa_handler = signal_server_stop};
+  struct sigaction const act = {.sa_handler = signal_server_stop};
   if (sigaction(SIGINT, &act, nullptr) == -1) {
     perror("sigaction");
     return NORI_FAILURE_ERROR("Could not install interrupt handler");
   };
 
-  const struct lws_protocols http_protocol = {
+  struct lws_protocols const http_protocol = {
       .name = "http",
       .callback = lws_http_callback,
       .id = 0,
@@ -679,9 +704,9 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
       .rx_buffer_size = 0,
       .tx_packet_size = 0};
 
-  const struct lws_protocols *pprotocols[] = {&http_protocol, nullptr};
+  struct lws_protocols const *pprotocols[] = {&http_protocol, nullptr};
 
-  const struct lws_http_mount http_mount = {
+  struct lws_http_mount const http_mount = {
       .protocol = "http",
       .mountpoint = "/",
       .mountpoint_len = 1,

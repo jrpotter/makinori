@@ -3,7 +3,7 @@
 #include "nori/cmdline.h"
 #include "nori/util.h"
 
-static struct nori_flag *nori_flag_search(const struct nori_str_view key)
+static struct nori_flag *nori_flag_search(struct nori_str_view const key)
 {
   for (size_t i = 0; NORI_FLAG_OPTIONS[i]; ++i) {
     struct nori_flag *f = NORI_FLAG_OPTIONS[i];
@@ -15,8 +15,8 @@ static struct nori_flag *nori_flag_search(const struct nori_str_view key)
 }
 
 struct nori_status nori_cmdline_parse(
-    const int argc,
-    const char *argv[const argc],
+    int const argc,
+    char const *argv[const argc],
     struct nori_str_view out[static 1])
 {
   memset(out, 0, sizeof(*out));
