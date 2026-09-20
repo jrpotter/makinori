@@ -2,6 +2,8 @@
 #include <stdlib.h>
 
 #include "nori.h"
+#include "nori/server.h"
+#include "nori/util.h"
 
 // ================================================================
 // Command Line
@@ -30,7 +32,7 @@ struct nori_flag *NORI_FLAG_OPTIONS[] = {
 // ================================================================
 
 struct nori_status
-serve_static(struct nori_request request, struct nori_response *const response)
+serve_static(struct nori_request req, struct nori_response *const res)
 {
   nori_log_info("Serving static");
   return NORI_SUCCESS;
@@ -42,15 +44,16 @@ static struct nori_route route_static = {
     .nr_next = nullptr,
     .nr_callback = serve_static};
 
-struct nori_status
-serve_root(struct nori_request request, struct nori_response *const response)
+struct nori_status serve_root(struct nori_request req, struct nori_response *const res)
 {
   nori_log_info("Serving root");
-  return NORI_SUCCESS;
+  char buffer[] =
+      "<html><title>Welcome</title><body>Hi<p>Pretty cool</p></body></html>";
+  return nori_response_write(res, buffer, sizeof(buffer) - 1);
 }
 
 static struct nori_route route_root = {
-    .nr_method = NORI_METHOD_POST,
+    .nr_method = NORI_METHOD_GET,
     .nr_path = NSV("/"),
     .nr_next = &route_static,
     .nr_callback = serve_root};
