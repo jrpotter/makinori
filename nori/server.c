@@ -1,13 +1,23 @@
+#include <fcntl.h>
 #include <libwebsockets.h>
 #include <signal.h>
 #include <ucontext.h>
+#include <unistd.h>
 
 #include "nori/server.h"
 #include "nori/util.h"
 
+constexpr ssize_t BUFFER_OUT = 4096;
+static_assert(BUFFER_OUT < SSIZE_MAX, "BUFFER_OUT >= SSIZE_MAX");
+
 // ================================================================
 // Signaling
 // ================================================================
+
+// TODO: We should have support to be able to run multiple servers behind their
+// own thread. In such a multithreaded situation, signaling introduced undefined
+// behavior. Can instead setup a keyevent listener in the main poll loop to
+// detect something like an interrupt.
 
 static sig_atomic_t SERVER_RUNNING = 1;
 
@@ -28,10 +38,15 @@ struct nori_response {
   struct nori_str_view nr_content_type;
   // HTTP status code.
   unsigned int nr_status;
-  // FD of out buffer to write the response into.
-  int nr_fd;
+  // FD of in/out buffers to read/write the response into.
+  int nr_fd_in;
+  int nr_fd_out;
   // The lws context this response is associated with.
-  struct lws *const nr_wsi;
+  struct lws *nr_wsi;
+  // The return status of the user-defined callback.
+  struct nori_status nr_result;
+  // Flag indicating the coroutine is finished.
+  bool nr_coro_done;
 };
 
 struct nori_status nori_response_set_header(
@@ -85,10 +100,29 @@ const struct nori_route *const nori_route_match(
 }
 
 struct nori_pss {
+  nori_route_callback_t *nc_callback;
   struct nori_request nc_request;
   struct nori_response nc_response;
   char co_stack[]; // FAM representing the coroutine's stack.
 };
+
+// A reference to our main context. Every coroutine should always link back to
+// this one.
+static thread_local ucontext_t context_main;
+
+// The call to `makecontext` does not permit any arguments but the user-defined
+// callback expects the request/response pair introduced in the current
+// transaction's PSS. Use this to temporarily hold the value for @coro_wrapper
+// to reference.
+static thread_local struct nori_pss *coro_pss;
+
+static void coro_wrapper(void)
+{
+  struct nori_pss *pss = coro_pss;
+  coro_pss = nullptr;
+  pss->nc_response.nr_result = pss->nc_callback(pss->nc_request, &pss->nc_response);
+  pss->nc_response.nr_coro_done = true;
+}
 
 static int lws_http_callback(
     struct lws *const wsi,
@@ -136,7 +170,17 @@ static int lws_http_callback(
   case LWS_CALLBACK_HTTP: {
     nori_log_debug("LWS_CALLBACK_HTTP");
 
-    memset(pss, 0, sizeof(struct nori_pss));
+    // ----------------------------------------------------------------
+    // Init
+    // ----------------------------------------------------------------
+
+    const struct lws_protocols *proto = lws_get_protocol(wsi);
+    const struct nori_server *const server = proto->user;
+    memset(pss, 0, sizeof(struct nori_pss) + server->config.nc_co_stack);
+
+    // ----------------------------------------------------------------
+    // Route matching
+    // ----------------------------------------------------------------
 
     enum nori_method request_method = NORI_METHOD_GET;
     if (lws_hdr_total_length(wsi, WSI_TOKEN_GET_URI)) {
@@ -152,8 +196,6 @@ static int lws_http_callback(
     char in_path[2048] = {'/'};
     lws_snprintf(in_path + 1, sizeof(in_path) - 1, "%s", (const char *)in);
 
-    const struct lws_protocols *proto = lws_get_protocol(wsi);
-    const struct nori_server *const server = proto->user;
     const struct nori_route *const route =
         nori_route_match(server, request_method, nori_str_view_of(in_path));
 
@@ -162,21 +204,67 @@ static int lws_http_callback(
     }
 
     if (!route->nr_callback) {
+      // TODO: This should return a 500.
       nori_log_warn(
           "No callback registered for path %s",
           route->nr_path.len == 0 ? "<EMPTY>" : route->nr_path.view);
-      // TODO: This should return a 500.
       break;
     }
 
-    // Use the route's path since that will live beyond this frame.
+    // Use the route's values since they live outside this frame.
+    pss->nc_callback = route->nr_callback;
     pss->nc_request.nr_method = route->nr_method;
     pss->nc_request.nr_path = route->nr_path;
 
-    // TODO: Create a new ucontext with link back to main.
-    // TODO: Open a pipe.
-    // TODO: Initialize response state.
-    // TODO: Trigger callback.
+    // ----------------------------------------------------------------
+    // Write back
+    // ----------------------------------------------------------------
+
+    int pipefd[2] = {};
+    if (pipe2(pipefd, O_NONBLOCK) == -1) {
+      // TODO: This should return a 500.
+      perror("pipe2");
+      nori_log_error("Could not create coroutine");
+      break;
+    }
+
+    pss->nc_response.nr_content_length = NSV("");
+    pss->nc_response.nr_content_type = NSV("text/html");
+    pss->nc_response.nr_status = HTTP_STATUS_OK;
+    pss->nc_response.nr_fd_in = pipefd[0];
+    pss->nc_response.nr_fd_out = pipefd[1];
+    pss->nc_response.nr_wsi = wsi;
+    pss->nc_response.nr_result = NORI_FAILURE;
+    pss->nc_response.nr_coro_done = false;
+
+    // ----------------------------------------------------------------
+    // Coroutine setup
+    // ----------------------------------------------------------------
+
+    ucontext_t context_coro = {};
+    if (getcontext(&context_coro) == -1) {
+      // TODO: This should return a 500.
+      perror("getcontext");
+      nori_log_error("Could not create coroutine");
+      break;
+    }
+
+    context_coro.uc_stack.ss_sp = pss->co_stack;
+    context_coro.uc_stack.ss_size = server->config.nc_co_stack;
+    context_coro.uc_link = &context_main;
+    makecontext(&context_coro, coro_wrapper, 0);
+
+    coro_pss = pss; // Set before context switch.
+    if (swapcontext(&context_main, &context_coro) == -1) {
+      // TODO: This should return a 500.
+      perror("swapcontext");
+      nori_log_error("Could not start coroutine");
+      break;
+    }
+
+    // ----------------------------------------------------------------
+    // Finish
+    // ----------------------------------------------------------------
 
     // Queues HTTP_BODY.* and HTTP_WRITEABLE callbacks.
     lws_callback_on_writable(wsi);
@@ -196,8 +284,51 @@ static int lws_http_callback(
   case LWS_CALLBACK_HTTP_WRITEABLE: {
     nori_log_debug("LWS_CALLBACK_HTTP_WRITEABLE");
 
-    // TODO: Read from the end of a pipe associated with a response. Read in chunks
-    // and flush them out as needed.
+    // ----------------------------------------------------------------
+    // Continue HTTP
+    // ----------------------------------------------------------------
+
+    if (!pss->nc_response.nr_coro_done) {
+      char out[BUFFER_OUT];
+      ssize_t count = read(pss->nc_response.nr_fd_out, out, BUFFER_OUT);
+
+      if (count == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
+        perror("read");
+        nori_log_error("Could not read from coroutine pipe");
+        return -1;
+      }
+
+      if (count == 0) {
+        nori_log_error("Coroutine pipe unexpectedly closed");
+        return -1;
+      }
+
+      lws_callback_on_writable(wsi); // More to read. Queue again.
+      return 0;
+    }
+
+    // ----------------------------------------------------------------
+    // Cleanup Response
+    // ----------------------------------------------------------------
+
+    if (close(pss->nc_response.nr_fd_in) == -1) {
+      perror("close fd_in");
+    }
+    if (close(pss->nc_response.nr_fd_out) == -1) {
+      perror("close fd_out");
+    }
+
+    // ----------------------------------------------------------------
+    // Validate Response
+    // ----------------------------------------------------------------
+
+    // TODO: Validate the response object.
+
+    // ----------------------------------------------------------------
+    // Finish HTTP
+    // ----------------------------------------------------------------
+
+    // TODO: Finish the response.
 
     break;
   }
@@ -235,6 +366,7 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
 {
   const struct sigaction act = {.sa_handler = signal_server_stop};
   if (sigaction(SIGINT, &act, nullptr) == -1) {
+    perror("sigaction");
     nori_log_error("Could not install interrupt handler");
     return NORI_FAILURE;
   };

@@ -32,6 +32,7 @@ struct nori_flag *NORI_FLAG_OPTIONS[] = {
 struct nori_status
 serve_static(struct nori_request request, struct nori_response *const response)
 {
+  nori_log_info("Serving static");
   return NORI_SUCCESS;
 }
 
@@ -44,6 +45,7 @@ static struct nori_route route_static = {
 struct nori_status
 serve_root(struct nori_request request, struct nori_response *const response)
 {
+  nori_log_info("Serving root");
   return NORI_SUCCESS;
 }
 
