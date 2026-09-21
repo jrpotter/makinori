@@ -75,7 +75,7 @@ struct nori_response {
   // The return status of the user-defined callback.
   struct nori_status nr_status;
   // The coroutine context and a flag indicating its current state.
-  struct ucontext_t *nr_context;
+  struct ucontext_t nr_context;
   enum nori_response_state nr_state;
   // FAM representing the coroutine's stack.
   char nr_co_stack[];

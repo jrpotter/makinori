@@ -18,10 +18,13 @@
 
 static sig_atomic_t volatile SERVER_RUNNING = 1;
 
-static void signal_server_stop(int const signal)
+static void server_signal_handler(int const signal)
 {
-  if (signal == SIGINT) {
+  switch (signal) {
+  case SIGINT: {
     SERVER_RUNNING = 0;
+    break;
+  }
   }
 }
 
@@ -217,25 +220,24 @@ static int lws_http_callback(
       res->nr_fd_read = pipefd[0];
       res->nr_fd_write = pipefd[1];
       res->nr_status = NORI_FAILURE;
+      // res->nr_context = {};
+      res->nr_state = NORI_RESPONSE_STATE_HEADER;
     }
 
     { // --- Setup the coroutine. --------------------------------------------------
 
       // Saves the content of the registers, signal mask, and the stack.
-      ucontext_t context_coro = {};
-      if (getcontext(&context_coro) == -1) { // TODO: Return a 500.
+      if (getcontext(&res->nr_context) == -1) { // TODO: Return a 500.
         perror("[lws_callback_http,getcontext] ret:-1");
         nori_log_error("Could not get coroutine");
         goto lws_callback_http_cleanup;
       }
 
-      context_coro.uc_stack.ss_sp = res->nr_co_stack;
-      context_coro.uc_stack.ss_size = server->config.nc_co_stack;
-      context_coro.uc_link = &context_server;
-      makecontext(&context_coro, coro_start, 0);
-
-      res->nr_context = &context_coro;
-      res->nr_state = NORI_RESPONSE_STATE_HEADER;
+      sigemptyset(&res->nr_context.uc_sigmask);
+      res->nr_context.uc_stack.ss_sp = res->nr_co_stack;
+      res->nr_context.uc_stack.ss_size = server->config.nc_co_stack;
+      res->nr_context.uc_link = &context_server;
+      makecontext(&res->nr_context, coro_start, 0);
     }
 
     { // --- Trigger first context switch. -----------------------------------------
@@ -446,10 +448,10 @@ static int lws_http_callback(
 
 struct nori_status nori_server_run(struct nori_server server[static 1])
 {
-  struct sigaction const act = {.sa_handler = signal_server_stop};
+  struct sigaction const act = {.sa_handler = server_signal_handler};
   if (sigaction(SIGINT, &act, nullptr) == -1) {
     perror("nori_server_run;sigaction");
-    return NORI_FAILURE_ERROR("Could not install interrupt handler");
+    return NORI_FAILURE_ERROR("Could not install signal handler");
   };
 
   struct lws_protocols const http_protocol = {

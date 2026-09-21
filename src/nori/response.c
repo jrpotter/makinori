@@ -9,7 +9,7 @@ thread_local ucontext_t context_server = {};
 struct nori_status nori_response_suspend(struct nori_response *const res)
 {
   nori_log_debug("(%p) SUSPENDED", (void *){res});
-  if (swapcontext(res->nr_context, &context_server) == -1) {
+  if (swapcontext(&res->nr_context, &context_server) == -1) {
     perror("[nori_response_suspend,swapcontext] ret:-1");
     return NORI_FAILURE;
   }
@@ -19,7 +19,7 @@ struct nori_status nori_response_suspend(struct nori_response *const res)
 struct nori_status nori_response_resume(struct nori_response *const res)
 {
   nori_log_debug("(%p) RESUMED", (void *){res});
-  if (swapcontext(&context_server, res->nr_context) == -1) {
+  if (swapcontext(&context_server, &res->nr_context) == -1) {
     perror("[nori_response_resume,swapcontext] ret:-1");
     return NORI_FAILURE;
   }
