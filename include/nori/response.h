@@ -13,7 +13,6 @@ struct nori_response;
 enum nori_http_code {
   NORI_HTTP_CODE_OK = 200,
   NORI_HTTP_CODE_CREATED = 201,
-  NORI_HTTP_CODE_INTERNAL = 999, // TODO: Remove from the public API.
 };
 
 /// Set the HTTP status code.

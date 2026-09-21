@@ -60,7 +60,7 @@ int main(int argc, char const *argv[argc])
 {
   struct nori_str_view action = {};
   struct nori_status status = nori_cmdline_parse(argc, argv, &action);
-  if (!status.ns_success) {
+  if (status.ns_error) {
     return EXIT_FAILURE;
   }
 
@@ -75,7 +75,7 @@ int main(int argc, char const *argv[argc])
 
   struct nori_config config = {};
   status = nori_config_load(FLAG_CONFIG.nf_vals[0], &config);
-  if (!status.ns_success) {
+  if (status.ns_error) {
     goto done;
   }
 
@@ -90,9 +90,9 @@ int main(int argc, char const *argv[argc])
     };
     status = nori_server_run(&server);
   } else {
-    status = NORI_FAILURE_ERROR("Unknown action %s", action.view);
+    status = NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Unknown action %s", action.view);
   }
 
 done:
-  return status.ns_success ? EXIT_SUCCESS : EXIT_FAILURE;
+  return status.ns_error ? EXIT_FAILURE : EXIT_SUCCESS;
 }

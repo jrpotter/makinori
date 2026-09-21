@@ -16,7 +16,7 @@ struct nori_status nori_response_suspend(struct nori_response *const res)
   nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) SUSPENDED", (void *){res});
   if (swapcontext(&res->nr_context, &context_server) == -1) {
     perror("[nori_response_suspend,swapcontext] ret:-1");
-    return NORI_FAILURE;
+    return NORI_FAILURE(NORI_ERROR_GENERIC);
   }
   return NORI_SUCCESS;
 }
@@ -26,7 +26,7 @@ struct nori_status nori_response_resume(struct nori_response *const res)
   nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) RESUMED", (void *){res});
   if (swapcontext(&context_server, &res->nr_context) == -1) {
     perror("[nori_response_resume,swapcontext] ret:-1");
-    return NORI_FAILURE;
+    return NORI_FAILURE(NORI_ERROR_GENERIC);
   }
   return NORI_SUCCESS;
 }
@@ -38,19 +38,15 @@ struct nori_status
 nori_response_set_code(struct nori_response *const r, enum nori_http_code code)
 {
   if (r->nr_state > NORI_RESPONSE_STATE_HEADER) {
-    return NORI_FAILURE_ERROR("The header is no longer mutable");
+    return NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "The header is no longer mutable");
   }
 
-  if (code == NORI_HTTP_CODE_INTERNAL) {
-    return NORI_FAILURE_ERROR("Cannot use internal HTTP code");
-  }
-
-  if (r->nr_common_code == NORI_HTTP_CODE_INTERNAL) {
+  if (r->nr_common_code == 0) {
     r->nr_common_code = code;
     return NORI_SUCCESS;
   }
 
-  return NORI_FAILURE_ERROR("Cannot specify HTTP code more than once");
+  return NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Cannot specify HTTP code more than once");
 }
 
 struct nori_status nori_response_set_header(
@@ -59,12 +55,13 @@ struct nori_status nori_response_set_header(
     struct nori_str_view value)
 {
   if (r->nr_state != NORI_RESPONSE_STATE_HEADER) {
-    return NORI_FAILURE_ERROR("The header is no longer mutable");
+    return NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "The header is no longer mutable");
   }
 
   if (nori_str_view_ieq(header, NSV("Content-Type"))) {
     if (r->nr_common_type.len > 0) {
-      return NORI_FAILURE_ERROR("Cannot specify Content-Type more than once");
+      return NORI_ERROR_EMIT(
+          NORI_ERROR_GENERIC, "Cannot specify Content-Type more than once");
     }
     r->nr_common_type = value;
     return NORI_SUCCESS;
@@ -72,7 +69,8 @@ struct nori_status nori_response_set_header(
 
   if (nori_str_view_ieq(header, NSV("Content-Length"))) {
     if (r->nr_common_length.len > 0) {
-      return NORI_FAILURE_ERROR("Cannot specify Content-Length more than once");
+      return NORI_ERROR_EMIT(
+          NORI_ERROR_GENERIC, "Cannot specify Content-Length more than once");
     }
     r->nr_common_length = value;
     return NORI_SUCCESS;
@@ -86,7 +84,7 @@ struct nori_status nori_response_set_header(
   // Must suspend at this point to flush headers.
   if (r->nr_pending_headers_count == NORI_RESPONSE_HEADER_THRESHOLD) {
     struct nori_status status = nori_response_suspend(r);
-    if (!status.ns_success) {
+    if (status.ns_error) {
       nori_log_error("Could not suspend coroutine");
       return status;
     }
@@ -106,7 +104,7 @@ struct nori_status nori_response_write(
     nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) HEADER -> HEADER_FLUSH", (void *){res});
     res->nr_state = NORI_RESPONSE_STATE_HEADER_FLUSH;
     status = nori_response_suspend(res);
-    if (!status.ns_success) {
+    if (status.ns_error) {
       nori_log_error("Could not suspend coroutine");
       return status;
     }
@@ -114,7 +112,7 @@ struct nori_status nori_response_write(
   }
 
   if (res->nr_state != NORI_RESPONSE_STATE_BODY) {
-    return NORI_FAILURE_ERROR("The body is no longer mutable");
+    return NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "The body is no longer mutable");
   }
 
   size_t count = 0;
@@ -124,7 +122,7 @@ struct nori_status nori_response_write(
     if (n == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
       nori_log_warn("nori_response_write blocked");
       status = nori_response_suspend(res);
-      if (!status.ns_success) {
+      if (status.ns_error) {
         nori_log_error("Could not suspend coroutine");
         return status;
       }
@@ -133,7 +131,7 @@ struct nori_status nori_response_write(
 
     if (n == -1) {
       perror("[nori_response_write] write:-1");
-      return NORI_FAILURE_ERROR("Could not write from coroutine");
+      return NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Could not write from coroutine");
     }
 
     nori_assert(n >= 0);
@@ -141,7 +139,7 @@ struct nori_status nori_response_write(
     if (count / NORI_RESPONSE_BODY_THRESHOLD <
         (count + n) / NORI_RESPONSE_BODY_THRESHOLD) {
       status = nori_response_suspend(res);
-      if (!status.ns_success) {
+      if (status.ns_error) {
         nori_log_error("Could not suspend coroutine");
         return status;
       }

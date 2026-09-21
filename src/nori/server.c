@@ -59,7 +59,7 @@ static void coro_start(void)
     nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) HEADER -> HEADER_FLUSH", (void *){res});
     res->nr_state = NORI_RESPONSE_STATE_HEADER_FLUSH;
     struct nori_status status = nori_response_suspend(res);
-    if (!status.ns_success) {
+    if (status.ns_error) {
       nori_log_error("Could not suspend coroutine");
       return;
     }
@@ -67,7 +67,7 @@ static void coro_start(void)
 
   if (res->nr_state == NORI_RESPONSE_STATE_HEADER_FLUSH) {
     struct nori_status status = nori_response_suspend(res);
-    if (!status.ns_success) {
+    if (status.ns_error) {
       nori_log_error("Could not suspend coroutine");
       return;
     }
@@ -77,7 +77,7 @@ static void coro_start(void)
     nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) BODY -> BODY_FLUSH", (void *){res});
     res->nr_state = NORI_RESPONSE_STATE_BODY_FLUSH;
     struct nori_status status = nori_response_suspend(res);
-    if (!status.ns_success) {
+    if (status.ns_error) {
       nori_log_error("Could not suspend coroutine");
       return;
     }
@@ -85,7 +85,7 @@ static void coro_start(void)
 
   if (res->nr_state == NORI_RESPONSE_STATE_BODY_FLUSH) {
     struct nori_status status = nori_response_suspend(res);
-    if (!status.ns_success) {
+    if (status.ns_error) {
       nori_log_error("Could not suspend coroutine");
       return;
     }
@@ -125,7 +125,7 @@ static struct nori_status nori_write_lws_common(
     unsigned char *end)
 {
   unsigned int code = NORI_HTTP_CODE_OK;
-  if (r->nr_common_code != NORI_HTTP_CODE_INTERNAL) {
+  if (r->nr_common_code != 0) {
     code = r->nr_common_code;
   }
 
@@ -138,7 +138,7 @@ static struct nori_status nori_write_lws_common(
   lws_filepos_t content_len = LWS_ILLEGAL_HTTP_CONTENT_LEN;
 
   if (lws_add_http_common_headers(wsi, code, content_type, content_len, p, end)) {
-    return NORI_FAILURE_ERROR("Could not write common headers");
+    return NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Could not write common headers");
   }
 
   return NORI_SUCCESS;
@@ -288,7 +288,7 @@ static int lws_http_callback(
       }
 
       res->nr_wsi = wsi;
-      res->nr_common_code = NORI_HTTP_CODE_INTERNAL;
+      res->nr_common_code = 0;
       res->nr_common_type = NSV("");
       res->nr_common_length = NSV("");
       res->nr_common_flushed = false;
@@ -296,7 +296,7 @@ static int lws_http_callback(
       // r->nr_pending_headers = {};
       res->nr_fd_read = pipefd[0];
       res->nr_fd_write = pipefd[1];
-      res->nr_status = NORI_FAILURE;
+      res->nr_status = NORI_FAILURE(NORI_ERROR_GENERIC);
       // res->nr_context = {};
       res->nr_state = NORI_RESPONSE_STATE_HEADER;
     }
@@ -320,7 +320,7 @@ static int lws_http_callback(
     { // --- Trigger first context switch. -----------------------------------------
       coro_arg = pss; // Set before context switch.
       res->nr_status = nori_response_resume(res);
-      if (!res->nr_status.ns_success) {
+      if (res->nr_status.ns_error) {
         nori_log_error("Could not resume coroutine");
         goto lws_callback_http_cleanup;
       }
@@ -357,7 +357,7 @@ static int lws_http_callback(
     // Unfortunately HTTP/1.0 cannot distinguish between a completed response
     // and a failure. At least with HTTP/1.1 and HTTP/2, there will be no
     // terminating chunk/frame so the client knows something happened.
-    if (!res->nr_status.ns_success) {
+    if (res->nr_status.ns_error) {
       return LWS_CLOSE;
     }
     // The event loop may trigger spurious writeable callbacks for internal
@@ -378,10 +378,10 @@ static int lws_http_callback(
       { // --- Check if LWS "common" fields should be written. ---------------------
         if (!res->nr_common_flushed &&
             (res->nr_state == NORI_RESPONSE_STATE_HEADER_FLUSH ||
-             (res->nr_common_code != NORI_HTTP_CODE_INTERNAL &&
-              res->nr_common_type.len > 0 && res->nr_common_length.len > 0))) {
+             (res->nr_common_code != 0 && res->nr_common_type.len > 0 &&
+              res->nr_common_length.len > 0))) {
           res->nr_status = nori_write_lws_common(wsi, res, &p, end);
-          if (!res->nr_status.ns_success) {
+          if (res->nr_status.ns_error) {
             nori_log_error("Could not write common headers");
             goto lws_callback_http_writeable_cleanup;
           }
@@ -396,8 +396,8 @@ static int lws_http_callback(
           if (lws_add_http_header_by_name(
                   wsi, (unsigned char const *)header.view,
                   (unsigned char const *)value.view, value.len, &p, end)) {
-            res->nr_status =
-                NORI_FAILURE_ERROR("Could not write header %s", header.view);
+            res->nr_status = NORI_ERROR_EMIT(
+                NORI_ERROR_GENERIC, "Could not write header %s", header.view);
             goto lws_callback_http_writeable_cleanup;
           }
         }
@@ -407,7 +407,8 @@ static int lws_http_callback(
       { // --- Advance the state machine. ------------------------------------------
         if (res->nr_state == NORI_RESPONSE_STATE_HEADER_FLUSH) {
           if (lws_finalize_write_http_header(wsi, start, &p, end)) {
-            res->nr_status = NORI_FAILURE_ERROR("Could not finalize http headers");
+            res->nr_status =
+                NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Could not finalize http headers");
             goto lws_callback_http_writeable_cleanup;
           }
           nori_trace(
@@ -418,7 +419,7 @@ static int lws_http_callback(
 
       { // --- Resume the coroutine. -----------------------------------------------
         res->nr_status = nori_response_resume(res);
-        if (!res->nr_status.ns_success) {
+        if (res->nr_status.ns_error) {
           nori_log_error("Could not resume coroutine");
           goto lws_callback_http_writeable_cleanup;
         }
@@ -437,12 +438,14 @@ static int lws_http_callback(
 
         if (n == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
           perror("[lws_callback_http_writable,read] ret:-1");
-          res->nr_status = NORI_FAILURE_ERROR("Could not read from coroutine");
+          res->nr_status =
+              NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Could not read from coroutine");
           goto lws_callback_http_writeable_cleanup;
         }
 
         if (n == 0) {
-          res->nr_status = NORI_FAILURE_ERROR("Coroutine pipe unexpected closed");
+          res->nr_status =
+              NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Coroutine pipe unexpected closed");
           goto lws_callback_http_writeable_cleanup;
         }
 
@@ -450,7 +453,8 @@ static int lws_http_callback(
           p += n;
           if (lws_write(wsi, start, lws_ptr_diff_size_t(p, start), LWS_WRITE_HTTP) !=
               lws_ptr_diff(p, start)) {
-            res->nr_status = NORI_FAILURE_ERROR("Could not write to body");
+            res->nr_status =
+                NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Could not write to body");
             goto lws_callback_http_writeable_cleanup;
           }
           lws_callback_on_writable(wsi); // Immediately re-enter event loop.
@@ -463,7 +467,8 @@ static int lws_http_callback(
           if (lws_write(
                   wsi, start, lws_ptr_diff_size_t(p, start), LWS_WRITE_HTTP_FINAL) !=
               lws_ptr_diff(p, start)) {
-            res->nr_status = NORI_FAILURE_ERROR("Could not write to body");
+            res->nr_status =
+                NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Could not write to body");
             goto lws_callback_http_writeable_cleanup;
           }
           nori_trace(
@@ -474,7 +479,7 @@ static int lws_http_callback(
 
       { // --- Resume the coroutine. -----------------------------------------------
         res->nr_status = nori_response_resume(res);
-        if (!res->nr_status.ns_success) {
+        if (res->nr_status.ns_error) {
           nori_log_error("Could not resume coroutine");
           goto lws_callback_http_writeable_cleanup;
         }
@@ -514,7 +519,7 @@ static int lws_http_callback(
     res->nr_fd_read = 0;
     res->nr_fd_write = 0;
 
-    if (!res->nr_status.ns_success || res->nr_state == NORI_RESPONSE_STATE_CLOSED) {
+    if (res->nr_status.ns_error || res->nr_state == NORI_RESPONSE_STATE_CLOSED) {
       return LWS_CLOSE;
     }
     return LWS_CONTINUE;
@@ -537,7 +542,7 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
   struct sigaction const act = {.sa_handler = server_signal_handler};
   if (sigaction(SIGINT, &act, nullptr) == -1) {
     perror("nori_server_run;sigaction");
-    return NORI_FAILURE_ERROR("Could not install signal handler");
+    return NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Could not install signal handler");
   };
 
   struct lws_protocols const http_protocol = {
@@ -569,12 +574,12 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
 
   struct lws_context *context = lws_create_context(&info);
   if (!context) {
-    return NORI_FAILURE_ERROR("Could not create lws context");
+    return NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Could not create lws context");
   }
 
   struct lws_vhost *vh = lws_create_vhost(context, &info);
   if (!vh) {
-    return NORI_FAILURE_ERROR("Could not create lws vhost");
+    return NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Could not create lws vhost");
   }
 
   nori_log_notice("Starting server on port %ld", server->config.nc_port);

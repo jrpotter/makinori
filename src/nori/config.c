@@ -30,28 +30,34 @@ struct nori_status nori_config_load(
   luaL_openlibs(L);
 
   if (luaL_loadstring(L, config_base)) {
-    return NORI_FAILURE_ERROR("Load base config: %s", lua_tostring(L, -1));
+    return NORI_ERROR_EMIT(
+        NORI_ERROR_GENERIC, "Load base config: %s", lua_tostring(L, -1));
   }
 
   if (lua_pcall(L, 0, 0, 0)) {
-    return NORI_FAILURE_ERROR("Exec base config: %s", lua_tostring(L, -1));
+    return NORI_ERROR_EMIT(
+        NORI_ERROR_GENERIC, "Exec base config: %s", lua_tostring(L, -1));
   }
 
   if (path.len > 0) {
     if (luaL_loadfile(L, path.view)) {
-      return NORI_FAILURE_ERROR("Open user config: %s", lua_tostring(L, -1));
+      return NORI_ERROR_EMIT(
+          NORI_ERROR_GENERIC, "Open user config: %s", lua_tostring(L, -1));
     }
     if (lua_pcall(L, 0, 0, 0)) {
-      return NORI_FAILURE_ERROR("Exec user config: %s", lua_tostring(L, -1));
+      return NORI_ERROR_EMIT(
+          NORI_ERROR_GENERIC, "Exec user config: %s", lua_tostring(L, -1));
     }
   }
 
   if (luaL_loadstring(L, config_verify)) {
-    return NORI_FAILURE_ERROR("Load verify config: %s", lua_tostring(L, -1));
+    return NORI_ERROR_EMIT(
+        NORI_ERROR_GENERIC, "Load verify config: %s", lua_tostring(L, -1));
   }
 
   if (lua_pcall(L, 0, 0, 0)) {
-    return NORI_FAILURE_ERROR("Exec verify config: %s", lua_tostring(L, -1));
+    return NORI_ERROR_EMIT(
+        NORI_ERROR_GENERIC, "Exec verify config: %s", lua_tostring(L, -1));
   }
 
   // Our verification script succeeded. Assume it's safe to access globals.
