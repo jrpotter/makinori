@@ -1,34 +1,8 @@
 #pragma once
 
 #include "nori/config.h"
-
-/// A representation of supported HTTP methods.
-enum nori_method {
-  NORI_METHOD_GET,
-};
-
-/// A representation of the supported HTTP status codes.
-enum nori_http_code {
-  NORI_HTTP_CODE_OK = 200,
-  NORI_HTTP_CODE_CREATED = 201,
-  NORI_HTTP_CODE_INTERNAL = 999,
-};
-
-/// An immutable HTTP request object.
-///
-/// Instances of this `struct` are created by the server and supplied to
-/// user-registered callbacks defined in the `struct nori_route`.
-struct nori_request {
-  enum nori_method nr_method;
-  struct nori_str_view nr_path;
-};
-
-/// A mutable HTTP response object.
-///
-/// Instances of this `struct` are created by the server and supplied to
-/// user-registered callbacks defined in the `struct nori_route`. The user
-/// is responsible for updating the response in the callback function.
-struct nori_response;
+#include "nori/request.h"
+#include "nori/response.h"
 
 /// User-supplied callback registered within a `struct nori_route` instance.
 typedef struct nori_status
@@ -69,22 +43,6 @@ struct nori_server {
   struct nori_config config;
   struct nori_route router;
 };
-
-/// Set the HTTP status code.
-struct nori_status
-nori_response_set_code(struct nori_response *const, enum nori_http_code code);
-
-/// Set an HTTP header value.
-struct nori_status nori_response_set_header(
-    struct nori_response *const,
-    struct nori_str_view header,
-    struct nori_str_view value);
-
-/// Write @buffer into the response body.
-struct nori_status nori_response_write(
-    struct nori_response *const,
-    char buffer[const static 1],
-    size_t const len);
 
 /// Entrypoint to start the server.
 ///

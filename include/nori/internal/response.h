@@ -1,0 +1,88 @@
+#pragma once
+
+// Every request spawns a new coroutine (a ucontext). A response object is
+// essentially a wrapper around the coroutine stack with some additional
+// bookkeeping. The utility functions exposed in the public header wrap I/O
+// calls with appropriately timed suspension and resumption calls.
+
+#include <ucontext.h>
+
+#include "nori/response.h"
+#include "nori/util.h"
+
+// Our choice of libwebsockets means we are bound to some of its design
+// decisions. In particular, unless we are willing to hold arbitrary amounts of
+// memory "staging" content, the user must write the response header before they
+// write the body. Both header and body is written in same callback in the main
+// event loop (LWS_CALLBACK_HTTP_WRITEABLE). This enum is used to distinguish
+// which actions are valid each time the callback is triggered. For instance,
+// once any content to the body is written, this state lets us know any attempts
+// to write headers should be met with an error.
+enum nori_response_state {
+  // Initial state indicating the user is writing headers.
+  // Set by the main context.
+  NORI_RESPONSE_STATE_HEADER = 1,
+  // State indicating the user is about to write to the body. Pending headers
+  // should be flushed at this point.
+  // Set by the user context.
+  NORI_RESPONSE_STATE_HEADER_FLUSH = 2,
+  // State indicating the user is writing to the body.
+  // Set by the main context.
+  NORI_RESPONSE_STATE_BODY = 3,
+  // State indicating the user is finished. Pending contents should be flushed
+  // at this point.
+  // Set by the user context.
+  NORI_RESPONSE_STATE_BODY_FLUSH = 4,
+  // State indicating the user-defined callback has finished.
+  // Set by the main context.
+  NORI_RESPONSE_STATE_CLOSING = 5,
+  // State indicating the user-defined callback has finished.
+  // Set by the main context.
+  NORI_RESPONSE_STATE_CLOSED = 6,
+};
+
+// Maximum number of headers we store before forcing writing. A balancing act
+// between suspending too frequently and making every response a bit bigger.
+size_t constexpr NORI_RESPONSE_HEADER_THRESHOLD = 8;
+
+// Size of the outbound buffer. Avoid making too large since otherwise LWS in
+// turn has to buffer any remaining value, requiring additional heap allocations
+// and generally slower processing.
+size_t constexpr NORI_RESPONSE_BODY_THRESHOLD = 4096;
+
+struct nori_response {
+  // The lws context this response is associated with.
+  struct lws *nr_wsi;
+  // The docstring for `lws_add_http_common_headers` indicates it should
+  // be replaceable using just the LWS public API, but it isn't clear
+  // how to do so. This utility seems to update private state that other
+  // functions do not touch. As a workaround, save the fields needed by
+  // `lws_add_http_common_headers` separately.
+  enum nori_http_code volatile nr_common_code;
+  struct nori_str_view volatile nr_common_type;
+  struct nori_str_view volatile nr_common_length;
+  bool volatile nr_common_flushed;
+  // A reference to the HTTP header that needs to be written out. Switch back to
+  // the main context when this buffer is full so we can flush it.
+  size_t volatile nr_pending_headers_count;
+  struct {
+    struct nori_str_view nr_key;
+    struct nori_str_view nr_val;
+  } volatile nr_pending_headers[NORI_RESPONSE_HEADER_THRESHOLD];
+  // FD of in/out buffers to read/write the response into.
+  int volatile nr_fd_read;
+  int volatile nr_fd_write;
+  // The return status of the user-defined callback.
+  struct nori_status volatile nr_status;
+  // The coroutine context and a flag indicating its current state.
+  struct ucontext_t *nr_context;
+  enum nori_response_state volatile nr_state;
+  // FAM representing the coroutine's stack.
+  char nr_co_stack[];
+};
+
+// A reference to our main context. Every coroutine links back to this.
+extern thread_local ucontext_t context_server;
+
+struct nori_status nori_response_suspend(struct nori_response *const);
+struct nori_status nori_response_resume(struct nori_response *const);
