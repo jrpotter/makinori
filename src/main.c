@@ -1,9 +1,4 @@
-#include <assert.h>
-#include <stdlib.h>
-
 #include "nori.h"
-#include "nori/server.h"
-#include "nori/util.h"
 
 // =================================================================================
 // Command Line

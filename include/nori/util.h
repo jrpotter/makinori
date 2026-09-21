@@ -1,6 +1,9 @@
 #pragma once
 
 #include <libwebsockets.h>
+#ifndef NDEBUG
+#include <stdlib.h> // IWYU pragma: keep
+#endif
 
 #include "nori/string.h"
 
@@ -28,8 +31,7 @@ struct nori_status {
 
 #define nori_log(lvl, msg, ...)                                                        \
   _lws_log(                                                                            \
-      lvl, ("[%s:%s] " msg ""), __FILE__,                                              \
-      CPP_STR(__LINE__) __VA_OPT__(, ) __VA_ARGS__)
+      lvl, ("%s:%s " msg ""), __FILE__, CPP_STR(__LINE__) __VA_OPT__(, ) __VA_ARGS__)
 
 #define nori_log_error(msg, ...) nori_log(LLL_ERR, msg __VA_OPT__(, ) __VA_ARGS__)
 #define nori_log_warn(msg, ...) nori_log(LLL_WARN, msg __VA_OPT__(, ) __VA_ARGS__)
@@ -37,11 +39,23 @@ struct nori_status {
 #define nori_log_info(msg, ...) nori_log(LLL_INFO, msg __VA_OPT__(, ) __VA_ARGS__)
 #define nori_log_debug(msg, ...) nori_log(LLL_DEBUG, msg __VA_OPT__(, ) __VA_ARGS__)
 
+#ifdef NDEBUG
+#define nori_assert(cond)
+#else
+#define nori_assert(cond)                                                              \
+  ({                                                                                   \
+    if (!(cond)) {                                                                     \
+      nori_log_error(#cond " assertion failed");                                       \
+      exit(1);                                                                         \
+    }                                                                                  \
+  })
+#endif
+
 #define NORI_FAILURE_EMIT(lvl, msg, ...)                                               \
   ({                                                                                   \
     auto status = NORI_FAILURE;                                                        \
     _lws_log(                                                                          \
-        lvl, ("%s:%s: " msg ""), status.ns_file.view,                                  \
+        lvl, ("%s:%s " msg ""), status.ns_file.view,                                   \
         status.ns_line.view __VA_OPT__(, ) __VA_ARGS__);                               \
     status;                                                                            \
   })

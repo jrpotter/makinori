@@ -1,5 +1,3 @@
-#include <assert.h>
-
 #include "nori/cmdline.h"
 #include "nori/util.h"
 

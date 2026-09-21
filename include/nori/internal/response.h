@@ -58,25 +58,25 @@ struct nori_response {
   // how to do so. This utility seems to update private state that other
   // functions do not touch. As a workaround, save the fields needed by
   // `lws_add_http_common_headers` separately.
-  enum nori_http_code volatile nr_common_code;
-  struct nori_str_view volatile nr_common_type;
-  struct nori_str_view volatile nr_common_length;
-  bool volatile nr_common_flushed;
+  enum nori_http_code nr_common_code;
+  struct nori_str_view nr_common_type;
+  struct nori_str_view nr_common_length;
+  bool nr_common_flushed;
   // A reference to the HTTP header that needs to be written out. Switch back to
   // the main context when this buffer is full so we can flush it.
-  size_t volatile nr_pending_headers_count;
+  size_t nr_pending_headers_count;
   struct {
     struct nori_str_view nr_key;
     struct nori_str_view nr_val;
-  } volatile nr_pending_headers[NORI_RESPONSE_HEADER_THRESHOLD];
+  } nr_pending_headers[NORI_RESPONSE_HEADER_THRESHOLD];
   // FD of in/out buffers to read/write the response into.
-  int volatile nr_fd_read;
-  int volatile nr_fd_write;
+  int nr_fd_read;
+  int nr_fd_write;
   // The return status of the user-defined callback.
-  struct nori_status volatile nr_status;
+  struct nori_status nr_status;
   // The coroutine context and a flag indicating its current state.
   struct ucontext_t *nr_context;
-  enum nori_response_state volatile nr_state;
+  enum nori_response_state nr_state;
   // FAM representing the coroutine's stack.
   char nr_co_stack[];
 };
