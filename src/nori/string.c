@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "nori/string.h"
 #include "nori/util.h"

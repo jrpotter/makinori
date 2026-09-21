@@ -1,4 +1,9 @@
+#include <errno.h>
+#include <stdio.h>
+#include <unistd.h>
+
 #include "nori/internal/response.h"
+#include "nori/logger.h"
 #include "nori/response.h"
 
 // =================================================================================
@@ -8,7 +13,7 @@ thread_local ucontext_t context_server = {};
 
 struct nori_status nori_response_suspend(struct nori_response *const res)
 {
-  nori_log_debug("(%p) SUSPENDED", (void *){res});
+  nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) SUSPENDED", (void *){res});
   if (swapcontext(&res->nr_context, &context_server) == -1) {
     perror("[nori_response_suspend,swapcontext] ret:-1");
     return NORI_FAILURE;
@@ -18,7 +23,7 @@ struct nori_status nori_response_suspend(struct nori_response *const res)
 
 struct nori_status nori_response_resume(struct nori_response *const res)
 {
-  nori_log_debug("(%p) RESUMED", (void *){res});
+  nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) RESUMED", (void *){res});
   if (swapcontext(&context_server, &res->nr_context) == -1) {
     perror("[nori_response_resume,swapcontext] ret:-1");
     return NORI_FAILURE;
@@ -98,7 +103,7 @@ struct nori_status nori_response_write(
   struct nori_status status = NORI_SUCCESS;
 
   if (res->nr_state == NORI_RESPONSE_STATE_HEADER) {
-    nori_log_debug("(%p) HEADER -> HEADER_FLUSH", (void *){res});
+    nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) HEADER -> HEADER_FLUSH", (void *){res});
     res->nr_state = NORI_RESPONSE_STATE_HEADER_FLUSH;
     status = nori_response_suspend(res);
     if (!status.ns_success) {

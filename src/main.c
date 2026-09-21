@@ -1,5 +1,6 @@
+#include <stdio.h>
+
 #include "nori.h"
-#include "nori/util.h"
 
 // =================================================================================
 // Command Line
@@ -57,13 +58,8 @@ static struct nori_route route_root = {
 
 int main(int argc, char const *argv[argc])
 {
-  struct nori_status status = nori_init();
-  if (!status.ns_success) {
-    return EXIT_FAILURE;
-  }
-
   struct nori_str_view action = {};
-  status = nori_cmdline_parse(argc, argv, &action);
+  struct nori_status status = nori_cmdline_parse(argc, argv, &action);
   if (!status.ns_success) {
     return EXIT_FAILURE;
   }
@@ -82,6 +78,10 @@ int main(int argc, char const *argv[argc])
   if (!status.ns_success) {
     goto done;
   }
+
+  // Logs emitted earlier are ERRORs so setting now behaves the same as if we
+  // were to set it sooner.
+  nori_log_set_level(config.nc_log_level);
 
   if (nori_str_view_eq(action, NSV("run"))) {
     struct nori_server server = {

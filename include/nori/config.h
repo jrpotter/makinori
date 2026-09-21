@@ -8,10 +8,10 @@ enum nori_event_loop {
 
 /// Server configuration parameters.
 struct nori_config {
-  unsigned long long nc_co_stack;  // COROUTINE_STACK
-  enum nori_event_loop nc_ev_loop; // EVENT_LOOP
-  unsigned long nc_log;            // LOG_LEVEL
-  unsigned long nc_port;           // PORT
+  unsigned long long nc_co_stack;   // COROUTINE_STACK
+  enum nori_event_loop nc_ev_loop;  // EVENT_LOOP
+  enum nori_log_level nc_log_level; // LOG_LEVEL
+  unsigned long nc_port;            // PORT
 };
 
 /// Load the base configuration state.

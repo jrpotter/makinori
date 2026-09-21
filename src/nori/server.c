@@ -56,7 +56,7 @@ static void coro_start(void)
   // callback that transitions beyond .*_BODY.
 
   if (res->nr_state == NORI_RESPONSE_STATE_HEADER) {
-    nori_log_debug("(%p) HEADER -> HEADER_FLUSH", (void *){res});
+    nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) HEADER -> HEADER_FLUSH", (void *){res});
     res->nr_state = NORI_RESPONSE_STATE_HEADER_FLUSH;
     struct nori_status status = nori_response_suspend(res);
     if (!status.ns_success) {
@@ -74,7 +74,7 @@ static void coro_start(void)
   }
 
   if (res->nr_state == NORI_RESPONSE_STATE_BODY) {
-    nori_log_debug("(%p) BODY -> BODY_FLUSH", (void *){res});
+    nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) BODY -> BODY_FLUSH", (void *){res});
     res->nr_state = NORI_RESPONSE_STATE_BODY_FLUSH;
     struct nori_status status = nori_response_suspend(res);
     if (!status.ns_success) {
@@ -91,7 +91,7 @@ static void coro_start(void)
     }
   }
 
-  nori_log_debug("(%p) FINISHED", (void *){res});
+  nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) FINISHED", (void *){res});
 }
 
 // =================================================================================
@@ -149,6 +149,81 @@ static struct nori_status nori_write_lws_common(
 int constexpr LWS_CONTINUE = 0;
 int constexpr LWS_CLOSE = -1;
 
+static void nori_trace_callback(enum lws_callback_reasons reason)
+{
+  // Ordered in roughly the order the callbacks are triggered.
+  switch (reason) {
+  case LWS_CALLBACK_WSI_CREATE: {
+    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_WSI_CREATE");
+    break;
+  }
+  case LWS_CALLBACK_PROTOCOL_INIT: {
+    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_PROTOCOL_INIT");
+    break;
+  }
+  case LWS_CALLBACK_FILTER_NETWORK_CONNECTION: {
+    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_FILTER_NETWORK_CONNECTION");
+    break;
+  }
+  case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
+    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED");
+    break;
+  }
+  case LWS_CALLBACK_EVENT_WAIT_CANCELLED: {
+    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_EVENT_WAIT_CANCELLED");
+    break;
+  }
+  case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
+    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_FILTER_HTTP_CONNECTION");
+    break;
+  }
+  case LWS_CALLBACK_HTTP_BIND_PROTOCOL: {
+    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP_BIND_PROTOCOL");
+    break;
+  }
+  case LWS_CALLBACK_CHECK_ACCESS_RIGHTS: {
+    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_CHECK_ACCESS_RIGHTS");
+    break;
+  }
+  case LWS_CALLBACK_HTTP: {
+    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP");
+    break;
+  }
+  case LWS_CALLBACK_HTTP_BODY: {
+    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP_BODY");
+    break;
+  }
+  case LWS_CALLBACK_HTTP_BODY_COMPLETION: {
+    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP_BODY_COMPLETION");
+    break;
+  }
+  case LWS_CALLBACK_HTTP_WRITEABLE: {
+    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP_WRITEABLE");
+    break;
+  }
+  case LWS_CALLBACK_HTTP_DROP_PROTOCOL: {
+    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP_DROP_PROTOCOL");
+    break;
+  }
+  case LWS_CALLBACK_CLOSED_HTTP: {
+    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_CLOSED_HTTP");
+    break;
+  }
+  case LWS_CALLBACK_PROTOCOL_DESTROY: {
+    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_PROTOCOL_DESTROY");
+    break;
+  }
+  case LWS_CALLBACK_WSI_DESTROY: {
+    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_WSI_DESTROY");
+    break;
+  }
+  default: {
+    nori_log_warn("Unmanaged callback %u", reason);
+    break;
+  }
+  }
+}
+
 static int lws_http_callback(
     struct lws *const wsi,
     enum lws_callback_reasons reason,
@@ -159,6 +234,8 @@ static int lws_http_callback(
   struct nori_pss *pss = user;
   struct nori_request *const req = &pss->nc_request;
   struct nori_response *const res = &pss->nc_response;
+
+  nori_trace_callback(reason);
 
   // Ordered in roughly the same order the callbacks are triggered.
   switch (reason) {
@@ -326,7 +403,8 @@ static int lws_http_callback(
             res->nr_status = NORI_FAILURE_ERROR("Could not finalize http headers");
             goto lws_callback_http_writeable_cleanup;
           }
-          nori_log_debug("(%p) HEADER_FLUSH -> BODY", (void *){res});
+          nori_trace(
+              NORI_TRACE_RESPONSE_STATE, "(%p) HEADER_FLUSH -> BODY", (void *){res});
           res->nr_state = NORI_RESPONSE_STATE_BODY;
         }
       }
@@ -381,7 +459,8 @@ static int lws_http_callback(
             res->nr_status = NORI_FAILURE_ERROR("Could not write to body");
             goto lws_callback_http_writeable_cleanup;
           }
-          nori_log_debug("(%p) BODY_FLUSH -> CLOSING", (void *){res});
+          nori_trace(
+              NORI_TRACE_RESPONSE_STATE, "(%p) BODY_FLUSH -> CLOSING", (void *){res});
           res->nr_state = NORI_RESPONSE_STATE_CLOSING;
         }
       }
@@ -402,7 +481,7 @@ static int lws_http_callback(
     }
     case NORI_RESPONSE_STATE_CLOSING: {
       if (lws_http_transaction_completed(wsi)) {
-        nori_log_debug("(%p) CLOSING -> CLOSED", (void *){res});
+        nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) CLOSING -> CLOSED", (void *){res});
         res->nr_state = NORI_RESPONSE_STATE_CLOSED;
       } else {
         // Otherwise the connection remains open. LWS is responsible for

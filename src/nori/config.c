@@ -1,7 +1,9 @@
 #include <lua5.4/lauxlib.h>
 #include <lua5.4/lualib.h>
+#include <string.h>
 
 #include "nori/config.h"
+#include "nori/logger.h"
 #include "nori/util.h"
 
 static char const config_base[] = {
@@ -12,10 +14,11 @@ static char const config_verify[] = {
 #embed "./verify.lua"
     , '\0'};
 
-static struct nori_str_view constexpr LEVEL_ERROR = NSV("error");
-static struct nori_str_view constexpr LEVEL_WARN = NSV("warn");
-static struct nori_str_view constexpr LEVEL_NOTICE = NSV("notice");
-static struct nori_str_view constexpr LEVEL_INFO = NSV("info");
+static struct nori_str_view constexpr FLAG_LEVEL_DEBUG = NSV("debug");
+static struct nori_str_view constexpr FLAG_LEVEL_INFO = NSV("info");
+static struct nori_str_view constexpr FLAG_LEVEL_NOTICE = NSV("notice");
+static struct nori_str_view constexpr FLAG_LEVEL_WARN = NSV("warn");
+static struct nori_str_view constexpr FLAG_LEVEL_ERROR = NSV("error");
 
 struct nori_status nori_config_load(
     struct nori_str_view const path,
@@ -72,18 +75,18 @@ struct nori_status nori_config_load(
     size_t len = 0;
     struct nori_str_view val = nori_str_view_of(lua_tolstring(L, -1, &len));
 
-    out->nc_log = LLL_ERR;
-    if (!nori_str_view_eq(val, LEVEL_ERROR)) {
-      out->nc_log |= LLL_WARN;
-      if (!nori_str_view_eq(val, LEVEL_WARN)) {
-        out->nc_log |= LLL_NOTICE;
-        if (!nori_str_view_eq(val, LEVEL_NOTICE)) {
-          out->nc_log |= LLL_INFO;
-          if (!nori_str_view_eq(val, LEVEL_INFO)) {
-            out->nc_log |= LLL_DEBUG;
-          }
-        }
-      }
+    if (nori_str_view_eq(val, FLAG_LEVEL_DEBUG)) {
+      out->nc_log_level = NORI_LOG_LEVEL_DEBUG;
+    } else if (nori_str_view_eq(val, FLAG_LEVEL_INFO)) {
+      out->nc_log_level = NORI_LOG_LEVEL_INFO;
+    } else if (nori_str_view_eq(val, FLAG_LEVEL_NOTICE)) {
+      out->nc_log_level = NORI_LOG_LEVEL_NOTICE;
+    } else if (nori_str_view_eq(val, FLAG_LEVEL_WARN)) {
+      out->nc_log_level = NORI_LOG_LEVEL_WARN;
+    } else if (nori_str_view_eq(val, FLAG_LEVEL_ERROR)) {
+      out->nc_log_level = NORI_LOG_LEVEL_ERROR;
+    } else {
+      nori_assert(false);
     }
   }
 
@@ -94,7 +97,6 @@ struct nori_status nori_config_load(
   }
 
   lua_close(L);
-  nori_set_log_level(out->nc_log);
 
   return NORI_SUCCESS;
 }

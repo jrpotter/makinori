@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "nori/cmdline.h"
 #include "nori/util.h"
 
