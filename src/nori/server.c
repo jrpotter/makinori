@@ -353,10 +353,17 @@ static int lws_http_callback(
   }
 
   case LWS_CALLBACK_HTTP_WRITEABLE: {
+    // If the user-defined callback returns failure, we close the connection.
+    // Unfortunately HTTP/1.0 cannot distinguish between a completed response
+    // and a failure. At least with HTTP/1.1 and HTTP/2, there will be no
+    // terminating chunk/frame so the client knows something happened.
+    if (!res->nr_status.ns_success) {
+      return LWS_CLOSE;
+    }
     // The event loop may trigger spurious writeable callbacks for internal
     // reasons. If our status is failed or state is closed, then we have already
     // cleaned up resources and there should be nothing left to do.
-    if (!res->nr_status.ns_success || res->nr_state == NORI_RESPONSE_STATE_CLOSED) {
+    if (res->nr_state == NORI_RESPONSE_STATE_CLOSED) {
       return LWS_CLOSE;
     }
 
