@@ -138,7 +138,7 @@ static struct nori_status nori_write_lws_common(
   lws_filepos_t content_len = LWS_ILLEGAL_HTTP_CONTENT_LEN;
 
   if (lws_add_http_common_headers(wsi, code, content_type, content_len, p, end)) {
-    return NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Could not write common headers");
+    return NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not write common headers");
   }
 
   return NORI_SUCCESS;
@@ -296,7 +296,7 @@ static int lws_http_callback(
       // r->nr_pending_headers = {};
       res->nr_fd_read = pipefd[0];
       res->nr_fd_write = pipefd[1];
-      res->nr_status = NORI_FAILURE(NORI_ERROR_GENERIC);
+      res->nr_status = NORI_FAILURE(NORI_ERROR_SYSTEM);
       // res->nr_context = {};
       res->nr_state = NORI_RESPONSE_STATE_HEADER;
     }
@@ -397,7 +397,7 @@ static int lws_http_callback(
                   wsi, (unsigned char const *)header.view,
                   (unsigned char const *)value.view, value.len, &p, end)) {
             res->nr_status = NORI_ERROR_EMIT(
-                NORI_ERROR_GENERIC, "Could not write header %s", header.view);
+                NORI_ERROR_SYSTEM, "Could not write header %s", header.view);
             goto lws_callback_http_writeable_cleanup;
           }
         }
@@ -408,7 +408,7 @@ static int lws_http_callback(
         if (res->nr_state == NORI_RESPONSE_STATE_HEADER_FLUSH) {
           if (lws_finalize_write_http_header(wsi, start, &p, end)) {
             res->nr_status =
-                NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Could not finalize http headers");
+                NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not finalize http headers");
             goto lws_callback_http_writeable_cleanup;
           }
           nori_trace(
@@ -439,13 +439,13 @@ static int lws_http_callback(
         if (n == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
           perror("[lws_callback_http_writable,read] ret:-1");
           res->nr_status =
-              NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Could not read from coroutine");
+              NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not read from coroutine");
           goto lws_callback_http_writeable_cleanup;
         }
 
         if (n == 0) {
           res->nr_status =
-              NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Coroutine pipe unexpected closed");
+              NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Coroutine pipe unexpected closed");
           goto lws_callback_http_writeable_cleanup;
         }
 
@@ -454,7 +454,7 @@ static int lws_http_callback(
           if (lws_write(wsi, start, lws_ptr_diff_size_t(p, start), LWS_WRITE_HTTP) !=
               lws_ptr_diff(p, start)) {
             res->nr_status =
-                NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Could not write to body");
+                NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not write to body");
             goto lws_callback_http_writeable_cleanup;
           }
           lws_callback_on_writable(wsi); // Immediately re-enter event loop.
@@ -468,7 +468,7 @@ static int lws_http_callback(
                   wsi, start, lws_ptr_diff_size_t(p, start), LWS_WRITE_HTTP_FINAL) !=
               lws_ptr_diff(p, start)) {
             res->nr_status =
-                NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Could not write to body");
+                NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not write to body");
             goto lws_callback_http_writeable_cleanup;
           }
           nori_trace(
@@ -542,7 +542,7 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
   struct sigaction const act = {.sa_handler = server_signal_handler};
   if (sigaction(SIGINT, &act, nullptr) == -1) {
     perror("nori_server_run;sigaction");
-    return NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Could not install signal handler");
+    return NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not install signal handler");
   };
 
   struct lws_protocols const http_protocol = {
@@ -574,12 +574,12 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
 
   struct lws_context *context = lws_create_context(&info);
   if (!context) {
-    return NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Could not create lws context");
+    return NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not create lws context");
   }
 
   struct lws_vhost *vh = lws_create_vhost(context, &info);
   if (!vh) {
-    return NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Could not create lws vhost");
+    return NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not create lws vhost");
   }
 
   nori_log_notice("Starting server on port %ld", server->config.nc_port);

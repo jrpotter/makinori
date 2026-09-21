@@ -90,7 +90,7 @@ int main(int argc, char const *argv[argc])
     };
     status = nori_server_run(&server);
   } else {
-    status = NORI_ERROR_EMIT(NORI_ERROR_GENERIC, "Unknown action %s", action.view);
+    status = NORI_ERROR_EMIT(NORI_ERROR_INVALID_ARG, "Unknown action %s", action.view);
   }
 
 done:

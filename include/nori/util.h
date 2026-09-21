@@ -9,8 +9,16 @@
 
 enum nori_error {
   NORI_ERROR_NONE = 0,
+
+  // User facing errors. These happen because of user error.
+  NORI_ERROR_CONFIG = 1,
+  NORI_ERROR_INVALID_ARG,
+  NORI_ERROR_IMMUTABLE,
+  NORI_ERROR_DUPLICATE,
+
+  // System errors. These happen because of an internal error.
+  NORI_ERROR_SYSTEM = 900,
   NORI_ERROR_NOMEM,
-  NORI_ERROR_GENERIC = 999,
 };
 
 /// A representation of a success or failure.
@@ -26,8 +34,12 @@ struct nori_status {
                         .ns_line = NSV(CPP_STR(__LINE__))})
 
 #define NORI_FAILURE(err)                                                              \
-  ((struct nori_status){                                                               \
-      .ns_error = err, .ns_file = NSV(__FILE__), .ns_line = NSV(CPP_STR(__LINE__))})
+  ({                                                                                   \
+    static_assert(err > NORI_ERROR_NONE, "Did you mean to use NORI_SUCCESS?");         \
+    ((struct nori_status){.ns_error = err,                                             \
+                          .ns_file = NSV(__FILE__),                                    \
+                          .ns_line = NSV(CPP_STR(__LINE__))});                         \
+  })
 
 #define NORI_FAILURE_EMIT(err, lvl, msg, ...)                                          \
   ({                                                                                   \
