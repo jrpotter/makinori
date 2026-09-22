@@ -283,8 +283,7 @@ static int lws_http_callback(
     { // --- Setup the response. ---------------------------------------------------
       if (pipe2(pipefd, O_NONBLOCK) == -1) {
         // TODO: This should return a 500.
-        perror("[lws_callback_http,pipe2] ret:-1");
-        nori_log_error("Could not create coroutine");
+        nori_perror("pipe2");
         goto lws_callback_http_cleanup;
       }
 
@@ -306,8 +305,7 @@ static int lws_http_callback(
 
       // Saves the content of the registers, signal mask, and the stack.
       if (getcontext(&res->nr_context) == -1) { // TODO: Return a 500.
-        perror("[lws_callback_http,getcontext] ret:-1");
-        nori_log_error("Could not get coroutine");
+        nori_perror("getcontext");
         goto lws_callback_http_cleanup;
       }
 
@@ -335,10 +333,10 @@ static int lws_http_callback(
 
   lws_callback_http_cleanup:
     if (pipefd[0] && close(pipefd[0]) == -1) {
-      perror("[lws_callback_http,pipefd[0]] close:-1");
+      nori_perror("close");
     }
     if (pipefd[1] && close(pipefd[1]) == -1) {
-      perror("[lws_callback_http,pipefd[1]] close:-1");
+      nori_perror("close");
     }
     return LWS_CLOSE;
   }
@@ -438,15 +436,13 @@ static int lws_http_callback(
         ssize_t n = read(res->nr_fd_read, p, NORI_RESPONSE_BODY_THRESHOLD);
 
         if (n == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
-          perror("[lws_callback_http_writable,read] ret:-1");
-          res->nr_status =
-              NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not read from coroutine");
+          nori_perror("read");
+          res->nr_status = NORI_FAILURE(NORI_ERROR_SYSTEM);
           goto lws_callback_http_writeable_cleanup;
         }
 
         if (n == 0) {
-          res->nr_status =
-              NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Coroutine pipe unexpected closed");
+          res->nr_status = NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Coroutine pipe closed");
           goto lws_callback_http_writeable_cleanup;
         }
 
@@ -511,11 +507,11 @@ static int lws_http_callback(
   lws_callback_http_writeable_cleanup:
     nori_assert(res->nr_fd_read);
     if (res->nr_fd_read && close(res->nr_fd_read) == -1) {
-      perror("[lws_callback_http_writeable,fd_read] close:-1");
+      nori_perror("close");
     }
     nori_assert(res->nr_fd_write);
     if (res->nr_fd_write && close(res->nr_fd_write) == -1) {
-      perror("[lws_callback_http_writeable,fd_write] close:-1");
+      nori_perror("close");
     }
     res->nr_fd_read = 0;
     res->nr_fd_write = 0;
@@ -542,7 +538,7 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
 {
   struct sigaction const act = {.sa_handler = server_signal_handler};
   if (sigaction(SIGINT, &act, nullptr) == -1) {
-    perror("nori_server_run;sigaction");
+    nori_perror("sigaction");
     return NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not install signal handler");
   };
 

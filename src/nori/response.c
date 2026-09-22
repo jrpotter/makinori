@@ -16,22 +16,24 @@ thread_local ucontext_t context_server = {};
 struct nori_status nori_response_suspend(struct nori_response *const res)
 {
   nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) SUSPENDED", (void *){res});
+
+  // Expect callers to log the error so we know the correct location.
   if (swapcontext(&res->nr_context, &context_server) == -1) {
-    perror("[nori_response_suspend,swapcontext] ret:-1");
-    // Expect callers to log the error so we know the correct location.
     return NORI_FAILURE(NORI_ERROR_SYSTEM);
   }
+
   return NORI_SUCCESS;
 }
 
 struct nori_status nori_response_resume(struct nori_response *const res)
 {
   nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) RESUMED", (void *){res});
+
+  // Expect callers to log the error so we know the correct location.
   if (swapcontext(&context_server, &res->nr_context) == -1) {
-    perror("[nori_response_resume,swapcontext] ret:-1");
-    // Expect callers to log the error so we know the correct location.
     return NORI_FAILURE(NORI_ERROR_SYSTEM);
   }
+
   return NORI_SUCCESS;
 }
 
@@ -151,8 +153,8 @@ struct nori_status nori_response_write(
         continue;
       }
 
-      perror("[nori_response_write] write:-1");
-      return NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not write from coroutine");
+      nori_perror("write");
+      return NORI_FAILURE(NORI_ERROR_SYSTEM);
     }
 
     // Let the main context read in what we just wrote out.
@@ -180,7 +182,7 @@ nori_response_write_file(struct nori_response *const res, struct nori_str_view p
   int fd = open(path.view, O_RDONLY | O_NONBLOCK);
 
   if (fd == -1) {
-    perror("[nori_reponse_write_file,open] ret:-1");
+    nori_perror("open");
     if (errno == EINTR || errno == EMFILE || errno == ENFILE) {
       return NORI_FAILURE(NORI_ERROR_SYSTEM);
     } else if (errno == ENOMEM) {
@@ -210,7 +212,7 @@ nori_response_write_file(struct nori_response *const res, struct nori_str_view p
         continue;
       }
 
-      perror("[nori_reponse_write_file,read] ret:-1");
+      nori_perror("read");
       if (errno == EISDIR) {
         status = NORI_FAILURE(NORI_ERROR_INVALID_ARG);
       } else {
@@ -227,7 +229,7 @@ nori_response_write_file(struct nori_response *const res, struct nori_str_view p
 
 cleanup:
   if (close(fd) == -1) {
-    perror("[nori_response_write_file,close] ret:-1");
+    nori_perror("close");
   }
   return status;
 }

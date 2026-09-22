@@ -3,12 +3,13 @@
 
 #include "nori/logger.h"
 
-// We map TRACE to THREAD because both happen to start with a 'T'.
+// Relate together because they start with the same letter.
+#define LLL_PERROR LLL_PARSER
 #define LLL_TRACE LLL_THREAD
 
 void nori_log_set_level(enum nori_log_level const value)
 {
-  int lws_level = 0;
+  int lws_level = LLL_PERROR | LLL_TRACE;
 
   if (value <= NORI_LOG_LEVEL_ERROR) {
     lws_level |= LLL_ERR;
@@ -25,9 +26,6 @@ void nori_log_set_level(enum nori_log_level const value)
   if (value <= NORI_LOG_LEVEL_DEBUG) {
     lws_level |= LLL_DEBUG;
   }
-
-  // Always include for tracing purposes.
-  lws_level |= LLL_TRACE;
 
   lws_set_log_level(lws_level, nullptr);
 }
@@ -71,4 +69,12 @@ void nori_trace_(bool tag, char const *const msg, ...)
     va_end(ap);
   }
 #endif
+}
+
+void nori_perror_(char const *const msg, ...)
+{
+  va_list ap = {};
+  va_start(ap, msg);
+  _lws_logv(LLL_PERROR, msg, ap);
+  va_end(ap);
 }
