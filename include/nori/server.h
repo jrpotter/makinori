@@ -12,8 +12,8 @@ nori_route_callback_t(struct nori_request const, struct nori_response *const);
 ///
 /// The user is expected to define an instance of this router with all of the
 /// various paths they want to support. Paths are checked against each route
-/// in order, according  to the @nr_next field. On a match, the corresponding
-/// @nr_callback is invoked.
+/// in order, according  to the nr_next field. On a match, the corresponding
+/// nr_callback is invoked.
 ///
 /// A basic example of two routes, one on `/static` and one on `/` is as follows:
 ///
@@ -46,7 +46,7 @@ struct nori_server {
 
 /// Entrypoint to start the server.
 ///
-/// Runs according to the configuration settings defined in @server.config.
+/// Runs according to the configuration settings defined in server.config.
 /// Serves requests according to the user-defined callbacks registered in
-/// @server.router.
+/// server.router.
 struct nori_status nori_server_run(struct nori_server server[static 1]);

@@ -25,8 +25,12 @@ struct nori_status nori_response_set_header(
     struct nori_str_view header,
     struct nori_str_view value);
 
-/// Write @buffer into the response body.
+/// Write buffer into the response body.
 struct nori_status nori_response_write(
     struct nori_response *const,
     char buffer[const static 1],
     size_t const len);
+
+/// Write file contents into the response body.
+struct nori_status
+nori_response_write_file(struct nori_response *const res, struct nori_str_view path);

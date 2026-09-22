@@ -1,10 +1,12 @@
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h>
 
 #include "nori/internal/response.h"
 #include "nori/logger.h"
 #include "nori/response.h"
+#include "nori/util.h"
 
 // =================================================================================
 // Coroutines
@@ -132,27 +134,26 @@ struct nori_status nori_response_write(
 
   size_t count = 0;
   while (count < len) {
-    // Write as much as we can in one go. The main context is responsible for reading
-    // in appropriately sized chunks to avoid LWS allocating additional buffer space
-    // unnecessarily.
+    // Write as much as we can in one go. The main context is responsible for
+    // buffering content appropriately.
     ssize_t n = write(res->nr_fd_write, buffer + count, len - count);
 
-    if (n == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-      nori_log_warn("nori_response_write blocked");
-      status = nori_response_suspend(res);
-      if (status.ns_error) {
-        nori_log_error("Could not suspend coroutine");
-        return status;
-      }
-      continue;
-    }
-
     if (n == -1) {
+      // Needing to pause at this point should rarely happen. Relinquish control
+      // back to the main context and have it resume this for another try later.
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        nori_log_warn("write blocked");
+        status = nori_response_suspend(res);
+        if (status.ns_error) {
+          nori_log_error("Could not suspend coroutine");
+          return status;
+        }
+        continue;
+      }
+
       perror("[nori_response_write] write:-1");
       return NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not write from coroutine");
     }
-
-    nori_assert(n >= 0);
 
     // Let the main context read in what we just wrote out.
     if (n > 0) {
@@ -167,4 +168,66 @@ struct nori_status nori_response_write(
   }
 
   return NORI_SUCCESS;
+}
+
+struct nori_status
+nori_response_write_file(struct nori_response *const res, struct nori_str_view path)
+{
+  if (path.len == 0) {
+    return NORI_FAILURE(NORI_ERROR_INVALID_ARG);
+  }
+
+  int fd = open(path.view, O_RDONLY | O_NONBLOCK);
+
+  if (fd == -1) {
+    perror("[nori_reponse_write_file,open] ret:-1");
+    if (errno == EINTR || errno == EMFILE || errno == ENFILE) {
+      return NORI_FAILURE(NORI_ERROR_SYSTEM);
+    } else if (errno == ENOMEM) {
+      return NORI_FAILURE(NORI_ERROR_NOMEM);
+    } else {
+      return NORI_FAILURE(NORI_ERROR_INVALID_ARG);
+    }
+  }
+
+  ssize_t n = 0;
+  char buffer[2048] = {};
+  struct nori_status status = NORI_SUCCESS;
+
+  while (true) {
+    n = read(fd, buffer, sizeof(buffer));
+
+    if (n == -1) {
+      // Needing to pause at this point should rarely happen. Relinquish control
+      // back to the main context and have it resume this for another try later.
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        nori_log_warn("read blocked");
+        status = nori_response_suspend(res);
+        if (status.ns_error) {
+          nori_log_error("Could not suspend coroutine");
+          goto cleanup;
+        }
+        continue;
+      }
+
+      perror("[nori_reponse_write_file,read] ret:-1");
+      if (errno == EISDIR) {
+        status = NORI_FAILURE(NORI_ERROR_INVALID_ARG);
+      } else {
+        status = NORI_FAILURE(NORI_ERROR_SYSTEM);
+      }
+    }
+
+    if (n == 0) {
+      goto cleanup;
+    }
+
+    status = nori_response_write(res, buffer, n);
+  }
+
+cleanup:
+  if (close(fd) == -1) {
+    perror("[nori_response_write_file,close] ret:-1");
+  }
+  return status;
 }

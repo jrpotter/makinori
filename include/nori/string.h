@@ -12,7 +12,7 @@ struct nori_str_view {
 #define NSV(X)                                                                         \
   ((struct nori_str_view){.view = ("" X ""), .len = (sizeof(X) / sizeof(X[0])) - 1})
 
-/// Construct a `struct nori_str_view` instance pointing to @ss.
+/// Construct a `struct nori_str_view` instance pointing to ss.
 ///
 /// In general, prefer using the `NSV` macro for compile-time construction.
 struct nori_str_view nori_str_view_of(char const ss[static 1]);
@@ -37,18 +37,18 @@ struct nori_str {
   size_t capacity; // Must accommodate trailing '\0'.
 };
 
-/// Create a new `struct nori_str` instance with initial @capacity.
+/// Create a new `struct nori_str` instance with initial capacity.
 struct nori_status
 nori_str_create(size_t const capacity, struct nori_str out[const static 1]);
 
 // Copy a `struct nori_str_view` into a `struct nori_str`.
 //
 // Copying automatically handles reallocating the size of the buffer if necessary.
-// Macros are provided to allow omitting the @offset parameter.
+// Macros are provided to allow omitting the offset parameter.
 //
 // @param dst - The buffer we are copying into.
 // @param src - The string view we are copying from.
-// @param offset - The position in @dst to start copying at. If this value is larger
+// @param offset - The position in dst to start copying at. If this value is larger
 //                 than the length of the string, start copying at the end. A value
 //                 of SIZE_MAX is a safe means of always copying at the end.
 struct nori_status nori_str_copy(

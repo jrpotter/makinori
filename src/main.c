@@ -42,9 +42,7 @@ static struct nori_route route_static = {
 struct nori_status serve_root(struct nori_request req, struct nori_response *const res)
 {
   nori_log_info("Serving root");
-  char buffer[] =
-      "<html><title>Welcome</title><body>Hi<p>Pretty cool</p></body></html>";
-  return nori_response_write(res, buffer, sizeof(buffer) - 1);
+  return nori_response_write_file(res, NSV("./public/index.html"));
 }
 
 static struct nori_route route_root = {

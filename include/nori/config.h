@@ -16,8 +16,8 @@ struct nori_config {
 
 /// Load the base configuration state.
 ///
-/// This should be called even if no user-supplied configuration file at @path
-/// is specified. It loads default state necessary for initializing the @out
+/// This should be called even if no user-supplied configuration file at path
+/// is specified. It loads default state necessary for initializing the out
 /// argument.
 ///
 /// @param path The path of a user-supplied configuration file. Ignored if empty.

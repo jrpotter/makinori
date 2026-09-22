@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include "nori/internal/response.h"
+#include "nori/logger.h"
 #include "nori/server.h"
 #include "nori/util.h"
 
@@ -41,7 +42,7 @@ static thread_local struct nori_pss *coro_arg;
 
 // Entrypoint for the coroutine. Arguments, if provided, must be `int`s which
 // may or may not be large enough to hold a pointer. As a workaround, use the
-// @coroutine_arg variable.
+// coroutine_arg variable.
 static void coro_start(void)
 {
   struct nori_pss *pss = coro_arg;
