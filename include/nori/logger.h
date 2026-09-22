@@ -20,10 +20,10 @@ void nori_log_set_level(const enum nori_log_level);
 
 /// Emit a log at the specified level.
 [[gnu::__format__(__printf__, 2, 3)]]
-void _nori_log(enum nori_log_level const level, char const *const msg, ...);
+void nori_log_(enum nori_log_level const level, char const *const msg, ...);
 
 #define nori_log(level, msg, ...)                                                      \
-  _nori_log(                                                                           \
+  nori_log_(                                                                           \
       (level), (__FILE__ ":" CPP_STR(__LINE__) ": " msg "")__VA_OPT__(, ) __VA_ARGS__)
 
 #define nori_log_debug(msg, ...)                                                       \
@@ -57,8 +57,8 @@ void _nori_log(enum nori_log_level const level, char const *const msg, ...);
 ///
 /// @param tag - Whether the trace should be enabled or not.
 [[gnu::__format__(__printf__, 2, 3)]]
-void _nori_trace(bool tag, char const *const msg, ...);
+void nori_trace_(bool tag, char const *const msg, ...);
 
 #define nori_trace(tag, msg, ...)                                                      \
-  _nori_trace(                                                                         \
+  nori_trace_(                                                                         \
       (tag), (__FILE__ ":" CPP_STR(__LINE__) ": " msg "")__VA_OPT__(, ) __VA_ARGS__)

@@ -32,7 +32,7 @@ void nori_log_set_level(enum nori_log_level const value)
   lws_set_log_level(lws_level, nullptr);
 }
 
-void _nori_log(enum nori_log_level const level, char const *const msg, ...)
+void nori_log_(enum nori_log_level const level, char const *const msg, ...)
 {
   va_list ap = {};
   va_start(ap, msg);
@@ -61,7 +61,7 @@ void _nori_log(enum nori_log_level const level, char const *const msg, ...)
   va_end(ap);
 }
 
-void _nori_trace(bool tag, char const *const msg, ...)
+void nori_trace_(bool tag, char const *const msg, ...)
 {
 #ifndef NDEBUG
   if (tag) {
