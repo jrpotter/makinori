@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <libwebsockets.h>
 #include <signal.h>
+#include <sys/mman.h>
 #include <ucontext.h>
 #include <unistd.h>
 
@@ -35,7 +36,7 @@ static void server_signal_handler(int const signal)
 struct nori_pss {
   nori_route_callback_t *nc_callback;
   struct nori_request nc_request;
-  struct nori_response nc_response; // Keep last for FAM.
+  struct nori_response nc_response;
 };
 
 static thread_local struct nori_pss *coro_arg;
@@ -232,6 +233,18 @@ static int lws_http_callback(
     void *in,
     size_t len)
 {
+  static long PAGE_SIZE = 0;
+
+  if (PAGE_SIZE <= 0) {
+    errno = 0;
+    PAGE_SIZE = sysconf(_SC_PAGESIZE);
+    if (PAGE_SIZE == -1 && errno != 0) {
+      nori_perror("sysconf");
+    }
+    // Impossible to recover. Aborting is the only sensible choice.
+    nori_assert(PAGE_SIZE > 0);
+  }
+
   struct nori_pss *pss = user;
   struct nori_request *const req = &pss->nc_request;
   struct nori_response *const res = &pss->nc_response;
@@ -241,20 +254,18 @@ static int lws_http_callback(
   // Ordered in roughly the same order the callbacks are triggered.
   switch (reason) {
   case LWS_CALLBACK_HTTP: {
+    memset(pss, 0, sizeof(struct nori_pss));
+
     struct lws_protocols const *proto = lws_get_protocol(wsi);
     struct nori_server const *const server = proto->user;
-    memset(pss, 0, sizeof(struct nori_pss) + server->config.nc_co_stack);
 
-    // Resources that need to be potentially cleaned up on error.
-    int pipefd[2] = {};
-
-    { // --- Setup the request. ----------------------------------------------------
+    { // --- Route request ---------------------------------------------------------
       enum nori_method request_method = NORI_METHOD_GET;
       if (lws_hdr_total_length(wsi, WSI_TOKEN_GET_URI)) {
         request_method = NORI_METHOD_GET;
       } else { // TODO: Return a 500
         nori_log_error("Unmanaged HTTP method");
-        goto lws_callback_http_cleanup;
+        return LWS_CLOSE;
       }
 
       char in_path[2048] = {'/'}; // TODO: Return 414 if longer than buffer.
@@ -264,81 +275,99 @@ static int lws_http_callback(
           nori_route_match(server, request_method, nori_str_view_of(in_path));
 
       if (route == nullptr) { // TODO: This should return a 404.
-        goto lws_callback_http_cleanup;
+        return LWS_CLOSE;
       }
 
       if (!route->nr_callback) { // TODO: This should return a 500.
         nori_log_error(
             "No callback registered for path %s",
             route->nr_path.len == 0 ? "<EMPTY>" : route->nr_path.view);
-        goto lws_callback_http_cleanup;
+        return LWS_CLOSE;
       }
 
-      // Use the route's values since they live outside this frame.
       pss->nc_callback = route->nr_callback;
+
       req->nr_method = route->nr_method;
       req->nr_path = route->nr_path;
-    }
-
-    { // --- Setup the response. ---------------------------------------------------
-      if (pipe2(pipefd, O_NONBLOCK) == -1) {
-        // TODO: This should return a 500.
-        nori_perror("pipe2");
-        goto lws_callback_http_cleanup;
-      }
 
       res->nr_wsi = wsi;
+      res->nr_status = NORI_FAILURE(NORI_ERROR_SYSTEM);
+      res->nr_common_flushed = false;
       res->nr_common_code = 0;
       res->nr_common_type = NSV("");
       res->nr_common_length = NSV("");
-      res->nr_common_flushed = false;
       res->nr_pending_headers_count = 0;
       // r->nr_pending_headers = {};
-      res->nr_fd_read = pipefd[0];
-      res->nr_fd_write = pipefd[1];
-      res->nr_status = NORI_FAILURE(NORI_ERROR_SYSTEM);
-      // res->nr_context = {};
+      res->nr_fd_read = 0;
+      res->nr_fd_write = 0;
       res->nr_state = NORI_RESPONSE_STATE_HEADER;
+      // res->nr_context = {};
+      res->nr_co_stack = nullptr;
     }
 
-    { // --- Setup the coroutine. --------------------------------------------------
+    { // --- Connect descriptors ---------------------------------------------------
+      int pipefd[2] = {};
+      if (pipe2(pipefd, O_NONBLOCK) == -1) {
+        // TODO: This should return a 500.
+        nori_perror("pipe2");
+        return LWS_CLOSE;
+      }
+
+      res->nr_fd_read = pipefd[0];
+      res->nr_fd_write = pipefd[1];
+    }
+
+    { // --- Setup the coroutine ---------------------------------------------------
 
       // Saves the content of the registers, signal mask, and the stack.
       if (getcontext(&res->nr_context) == -1) { // TODO: Return a 500.
         nori_perror("getcontext");
-        goto lws_callback_http_cleanup;
+        return LWS_CLOSE;
+      }
+
+      size_t const stack_size = (PAGE_SIZE + 1) * server->config.nc_co_pages;
+
+      // Allocate an additional page for use as a guard. As an extra precaution,
+      // probably a good idea to pass -fstack-clas-protected enabled on
+      // environments that support it.
+      void *const stack = mmap(
+          nullptr, stack_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1,
+          0);
+
+      if (stack == MAP_FAILED) {
+        nori_perror("mmap");
+        return LWS_CLOSE;
+      }
+
+      // Set before protection potentially fails so we munmap correctly.
+      res->nr_co_stack = stack;
+
+      if (mprotect(stack, PAGE_SIZE, PROT_NONE) == -1) {
+        nori_perror("mprotect");
+        return LWS_CLOSE;
       }
 
       sigemptyset(&res->nr_context.uc_sigmask);
-      res->nr_context.uc_stack.ss_sp = res->nr_co_stack;
-      res->nr_context.uc_stack.ss_size = server->config.nc_co_stack;
+      res->nr_context.uc_stack.ss_sp = stack + PAGE_SIZE;
+      res->nr_context.uc_stack.ss_size = stack_size - PAGE_SIZE;
       res->nr_context.uc_link = &context_server;
       makecontext(&res->nr_context, coro_start, 0);
     }
 
-    { // --- Trigger first context switch. -----------------------------------------
+    { // --- Trigger first context switch ------------------------------------------
       coro_arg = pss; // Set before context switch.
       res->nr_status = nori_response_resume(res);
       if (res->nr_status.ns_error) {
         nori_log_error("Could not resume coroutine");
-        goto lws_callback_http_cleanup;
+        return LWS_CLOSE;
       }
     }
 
-    { // --- Queue BODY and WRITEABLE callbacks. -----------------------------------
+    { // --- Queue BODY and WRITEABLE callbacks ------------------------------------
       lws_callback_on_writable(wsi);
     }
 
     return LWS_CONTINUE;
-
-  lws_callback_http_cleanup:
-    if (pipefd[0] && close(pipefd[0]) == -1) {
-      nori_perror("close");
-    }
-    if (pipefd[1] && close(pipefd[1]) == -1) {
-      nori_perror("close");
-    }
-    return LWS_CLOSE;
   }
 
   case LWS_CALLBACK_HTTP_BODY: {
@@ -374,7 +403,7 @@ static int lws_http_callback(
     switch (res->nr_state) {
     case NORI_RESPONSE_STATE_HEADER:
     case NORI_RESPONSE_STATE_HEADER_FLUSH: {
-      { // --- Check if LWS "common" fields should be written. ---------------------
+      { // --- Check if LWS "common" fields should be written ----------------------
         if (!res->nr_common_flushed &&
             (res->nr_state == NORI_RESPONSE_STATE_HEADER_FLUSH ||
              (res->nr_common_code != 0 && res->nr_common_type.len > 0 &&
@@ -382,13 +411,13 @@ static int lws_http_callback(
           res->nr_status = nori_write_lws_common(wsi, res, &p, end);
           if (res->nr_status.ns_error) {
             nori_log_error("Could not write common headers");
-            goto lws_callback_http_writeable_cleanup;
+            return LWS_CLOSE;
           }
           res->nr_common_flushed = true;
         }
       }
 
-      { // --- Flush any pending headers. ------------------------------------------
+      { // --- Flush pending headers -----------------------------------------------
         for (size_t i = 0; i < res->nr_pending_headers_count; ++i) {
           struct nori_str_view header = res->nr_pending_headers[i].nr_key;
           struct nori_str_view value = res->nr_pending_headers[i].nr_val;
@@ -397,18 +426,18 @@ static int lws_http_callback(
                   (unsigned char const *)value.view, value.len, &p, end)) {
             res->nr_status = NORI_ERROR_EMIT(
                 NORI_ERROR_SYSTEM, "Could not write header %s", header.view);
-            goto lws_callback_http_writeable_cleanup;
+            return LWS_CLOSE;
           }
         }
         res->nr_pending_headers_count = 0;
       }
 
-      { // --- Advance the state machine. ------------------------------------------
+      { // --- Advance the state machine -------------------------------------------
         if (res->nr_state == NORI_RESPONSE_STATE_HEADER_FLUSH) {
           if (lws_finalize_write_http_header(wsi, start, &p, end)) {
             res->nr_status =
                 NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not finalize http headers");
-            goto lws_callback_http_writeable_cleanup;
+            return LWS_CLOSE;
           }
           nori_trace(
               NORI_TRACE_RESPONSE_STATE, "(%p) HEADER_FLUSH -> BODY", (void *){res});
@@ -416,15 +445,15 @@ static int lws_http_callback(
         }
       }
 
-      { // --- Resume the coroutine. -----------------------------------------------
+      { // --- Resume the coroutine ------------------------------------------------
         res->nr_status = nori_response_resume(res);
         if (res->nr_status.ns_error) {
           nori_log_error("Could not resume coroutine");
-          goto lws_callback_http_writeable_cleanup;
+          return LWS_CLOSE;
         }
       }
 
-      { // --- Queue up another LWS_CALLBACK_HTTP_WRITEABLE. -----------------------
+      { // --- Queue up another LWS_CALLBACK_HTTP_WRITEABLE ------------------------
         lws_callback_on_writable(wsi);
       }
 
@@ -432,18 +461,18 @@ static int lws_http_callback(
     }
     case NORI_RESPONSE_STATE_BODY:
     case NORI_RESPONSE_STATE_BODY_FLUSH: {
-      { // --- Attempt to read HTTP content. ---------------------------------------
+      { // --- Attempt to read HTTP content ----------------------------------------
         ssize_t n = read(res->nr_fd_read, p, NORI_RESPONSE_BODY_THRESHOLD);
 
         if (n == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
           nori_perror("read");
           res->nr_status = NORI_FAILURE(NORI_ERROR_SYSTEM);
-          goto lws_callback_http_writeable_cleanup;
+          return LWS_CLOSE;
         }
 
         if (n == 0) {
           res->nr_status = NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Coroutine pipe closed");
-          goto lws_callback_http_writeable_cleanup;
+          return LWS_CLOSE;
         }
 
         if (n > 0) {
@@ -452,21 +481,21 @@ static int lws_http_callback(
               lws_ptr_diff(p, start)) {
             res->nr_status =
                 NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not write to body");
-            goto lws_callback_http_writeable_cleanup;
+            return LWS_CLOSE;
           }
           lws_callback_on_writable(wsi); // Immediately re-enter event loop.
           return LWS_CONTINUE;
         }
       }
 
-      { // --- Advance the state machine. ------------------------------------------
+      { // --- Advance the state machine -------------------------------------------
         if (res->nr_state == NORI_RESPONSE_STATE_BODY_FLUSH) {
           if (lws_write(
                   wsi, start, lws_ptr_diff_size_t(p, start), LWS_WRITE_HTTP_FINAL) !=
               lws_ptr_diff(p, start)) {
             res->nr_status =
                 NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not write to body");
-            goto lws_callback_http_writeable_cleanup;
+            return LWS_CLOSE;
           }
           nori_trace(
               NORI_TRACE_RESPONSE_STATE, "(%p) BODY_FLUSH -> CLOSING", (void *){res});
@@ -474,15 +503,15 @@ static int lws_http_callback(
         }
       }
 
-      { // --- Resume the coroutine. -----------------------------------------------
+      { // --- Resume the coroutine ------------------------------------------------
         res->nr_status = nori_response_resume(res);
         if (res->nr_status.ns_error) {
           nori_log_error("Could not resume coroutine");
-          goto lws_callback_http_writeable_cleanup;
+          return LWS_CLOSE;
         }
       }
 
-      { // --- Queue up another LWS_CALLBACK_HTTP_WRITEABLE. -----------------------
+      { // --- Queue up another LWS_CALLBACK_HTTP_WRITEABLE ------------------------
         lws_callback_on_writable(wsi);
       }
 
@@ -504,20 +533,34 @@ static int lws_http_callback(
     }
     }
 
-  lws_callback_http_writeable_cleanup:
-    nori_assert(res->nr_fd_read);
-    if (res->nr_fd_read && close(res->nr_fd_read) == -1) {
-      nori_perror("close");
-    }
-    nori_assert(res->nr_fd_write);
-    if (res->nr_fd_write && close(res->nr_fd_write) == -1) {
-      nori_perror("close");
-    }
-    res->nr_fd_read = 0;
-    res->nr_fd_write = 0;
-
     if (res->nr_status.ns_error || res->nr_state == NORI_RESPONSE_STATE_CLOSED) {
       return LWS_CLOSE;
+    }
+
+    return LWS_CONTINUE;
+  }
+
+  case LWS_CALLBACK_CLOSED_HTTP: {
+    if (res->nr_fd_read) {
+      if (close(res->nr_fd_read) == -1) {
+        nori_perror("close");
+      }
+      res->nr_fd_read = 0;
+    }
+    if (res->nr_fd_write) {
+      if (close(res->nr_fd_write) == -1) {
+        nori_perror("close");
+      }
+      res->nr_fd_write = 0;
+    }
+    if (res->nr_co_stack) {
+      struct lws_protocols const *proto = lws_get_protocol(wsi);
+      struct nori_server const *const server = proto->user;
+      size_t const stack_size = (PAGE_SIZE + 1) * server->config.nc_co_pages;
+      if (munmap(res->nr_co_stack, stack_size) == -1) {
+        nori_perror("munmap"); // Indicate the leak but don't abort.
+      }
+      res->nr_co_stack = nullptr;
     }
     return LWS_CONTINUE;
   }
@@ -547,7 +590,7 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
       .callback = lws_http_callback,
       .id = 0,
       .user = server,
-      .per_session_data_size = sizeof(struct nori_pss) + server->config.nc_co_stack,
+      .per_session_data_size = sizeof(struct nori_pss),
       .rx_buffer_size = 0,
       .tx_packet_size = 0};
 

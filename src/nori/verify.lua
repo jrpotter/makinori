@@ -1,8 +1,8 @@
 assert(
-  type(COROUTINE_STACK) == 'number' and (
-    COROUTINE_STACK >= 1024
+  type(COROUTINE_PAGES) == 'number' and (
+    COROUTINE_PAGES > 0
   ),
-  'COROUTINE_STACK must be >= 1024 bytes'
+  'COROUTINE_PAGES must be > 0'
 )
 
 assert(

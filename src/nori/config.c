@@ -63,9 +63,9 @@ struct nori_status nori_config_load(
   // Our verification script succeeded. Assume it's safe to access globals.
 
   {
-    lua_getglobal(L, "COROUTINE_STACK");
+    lua_getglobal(L, "COROUTINE_PAGES");
     long long val = lua_tointeger(L, -1);
-    out->nc_co_stack = val;
+    out->nc_co_pages = val;
   }
 
   {

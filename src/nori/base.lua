@@ -1,9 +1,7 @@
 -- The server runs each user-registered callback as a coroutine. This dictates
--- the size of each such coroutine. Generally this doesn't need to be large,
--- especially considering one still does have access to the heap. If you have
--- deeply nested callbacks with lots of locals though, it may be helpful to bump
--- this up.
-COROUTINE_STACK = 4096
+-- the size of each such coroutine. If you have deeply nested callbacks or
+-- heavily use the stack, it may be helpful to bump this up.
+COROUTINE_PAGES = 4
 
 -- The event loop library used. One of: poll.
 EVENT_LOOP = 'poll'

@@ -53,15 +53,17 @@ size_t constexpr NORI_RESPONSE_BODY_THRESHOLD = 4096;
 struct nori_response {
   // The lws context this response is associated with.
   struct lws *nr_wsi;
+  // The return status of the user-defined callback.
+  struct nori_status nr_status;
   // The docstring for `lws_add_http_common_headers` indicates it should
   // be replaceable using just the LWS public API, but it isn't clear
   // how to do so. This utility seems to update private state that other
   // functions do not touch. As a workaround, save the fields needed by
   // `lws_add_http_common_headers` separately.
+  bool nr_common_flushed;
   enum nori_http_code nr_common_code;
   struct nori_str_view nr_common_type;
   struct nori_str_view nr_common_length;
-  bool nr_common_flushed;
   // A reference to the HTTP header that needs to be written out. Switch back to
   // the main context when this buffer is full so we can flush it.
   size_t nr_pending_headers_count;
@@ -72,13 +74,14 @@ struct nori_response {
   // FD of in/out buffers to read/write the response into.
   int nr_fd_read;
   int nr_fd_write;
-  // The return status of the user-defined callback.
-  struct nori_status nr_status;
-  // The coroutine context and a flag indicating its current state.
-  struct ucontext_t nr_context;
+  // Where in the state machine our coroutine is currently.
   enum nori_response_state nr_state;
-  // FAM representing the coroutine's stack.
-  char nr_co_stack[];
+  // The stack state, register values, and the (unused) signal state.
+  struct ucontext_t nr_context;
+  // A memory-mapped region of size COROUTINE_PAGES + 1. The additional page
+  // is a guard page, set at the start of the stack, to protect against any
+  // accidental stack overflows.
+  void *nr_co_stack;
 };
 
 // A reference to our main context. Every coroutine links back to this.
