@@ -99,27 +99,6 @@ static void coro_start(void)
 // =================================================================================
 // Server
 
-struct nori_route const *const nori_route_match(
-    struct nori_server const server[const static 1],
-    enum nori_method const method,
-    struct nori_str_view const path)
-{
-  for (struct nori_route const *route = &server->router; route;
-       route = route->nr_next) {
-    nori_log_warn("%s, %s", route->nr_path.view, path.view);
-    if (route->nr_method != method) {
-      continue;
-    }
-    if (!nori_str_view_eq(route->nr_path, path)) {
-      // TODO: Support more complex route matching.
-      continue;
-    }
-    return route;
-  }
-
-  return nullptr;
-}
-
 static struct nori_status nori_write_lws_common(
     struct lws *const wsi,
     struct nori_response *const r,
@@ -260,49 +239,40 @@ static int lws_http_callback(
     struct nori_server const *const server = proto->user;
 
     { // --- Route request ---------------------------------------------------------
-      enum nori_method request_method = NORI_METHOD_GET;
       if (lws_hdr_total_length(wsi, WSI_TOKEN_GET_URI)) {
-        request_method = NORI_METHOD_GET;
+        req->nr_method = NORI_METHOD_GET;
       } else { // TODO: Return a 500
         nori_log_error("Unmanaged HTTP method");
         return LWS_CLOSE;
       }
 
-      char in_path[2048] = {'/'}; // TODO: Return 414 if longer than buffer.
-      lws_snprintf(in_path + 1, sizeof(in_path) - 1, "%s", (char const *)in);
+      // In LWS, the inclusion (or lack thereof) of a trailing `/` in the
+      // request path yields two different paths. The only exception is at root.
+      // For example, `localhost:8000` and `localhost:8000/` both have path `/`.
+      // TODO: Return 414 if longer than buffer.
+      int path_len = lws_snprintf(
+          req->nr_path_, NORI_REQUEST_MAX_PATH_LEN - 1, "%s", (char const *)in);
 
-      struct nori_route const *const route =
-          nori_route_match(server, request_method, nori_str_view_of(in_path));
+      nori_assert(path_len > 0);
+      req->nr_path = nori_str_view_create(req->nr_path_, path_len);
+
+      // Find the route that corresponds to our request. Also sets captures if
+      // the route's pattern includes them.
+      struct nori_route const *const route = nori_route_match(&server->route, req);
 
       if (route == nullptr) { // TODO: This should return a 404.
         return LWS_CLOSE;
       }
 
-      if (!route->nr_callback) { // TODO: This should return a 500.
-        nori_log_error(
-            "No callback registered for path %s",
-            route->nr_path.len == 0 ? "<EMPTY>" : route->nr_path.view);
+      if (!route->nr_callback) { // TODO: This should return a 204.
+        nori_log_warn("No callback registered for %s", req->nr_path.view);
         return LWS_CLOSE;
       }
 
       pss->nc_callback = route->nr_callback;
-
-      req->nr_method = route->nr_method;
-      req->nr_path = route->nr_path;
-
       res->nr_wsi = wsi;
       res->nr_status = NORI_FAILURE(NORI_ERROR_SYSTEM);
-      res->nr_common_flushed = false;
-      res->nr_common_code = 0;
-      res->nr_common_type = NSV("");
-      res->nr_common_length = NSV("");
-      res->nr_pending_headers_count = 0;
-      // r->nr_pending_headers = {};
-      res->nr_fd_read = 0;
-      res->nr_fd_write = 0;
       res->nr_state = NORI_RESPONSE_STATE_HEADER;
-      // res->nr_context = {};
-      res->nr_co_stack = nullptr;
     }
 
     { // --- Connect descriptors ---------------------------------------------------
@@ -598,8 +568,8 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
 
   struct lws_http_mount const http_mount = {
       .protocol = "http",
-      .mountpoint = "/",
-      .mountpoint_len = 1,
+      .mountpoint = "",
+      .mountpoint_len = 0,
       .origin_protocol = LWSMPRO_CALLBACK,
   };
 

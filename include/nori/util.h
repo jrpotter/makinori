@@ -48,6 +48,9 @@ struct nori_status {
     status;                                                                            \
   })
 
+#define NORI_WARN_EMIT(err, msg, ...)                                                  \
+  NORI_FAILURE_EMIT(err, NORI_LOG_LEVEL_WARN, msg __VA_OPT__(, ) __VA_ARGS__)
+
 #define NORI_ERROR_EMIT(err, msg, ...)                                                 \
   NORI_FAILURE_EMIT(err, NORI_LOG_LEVEL_ERROR, msg __VA_OPT__(, ) __VA_ARGS__)
 

@@ -25,20 +25,7 @@ struct nori_flag *NORI_FLAG_OPTIONS[] = {
 };
 
 // =================================================================================
-// Router
-
-struct nori_status
-serve_static(struct nori_request req, struct nori_response *const res)
-{
-  nori_log_info("Serving static");
-  return NORI_SUCCESS;
-}
-
-static struct nori_route route_static = {
-    .nr_method = NORI_METHOD_GET,
-    .nr_path = NSV("/static"),
-    .nr_next = nullptr,
-    .nr_callback = serve_static};
+// Routes
 
 struct nori_status serve_root(struct nori_request req, struct nori_response *const res)
 {
@@ -48,8 +35,8 @@ struct nori_status serve_root(struct nori_request req, struct nori_response *con
 
 static struct nori_route route_root = {
     .nr_method = NORI_METHOD_GET,
-    .nr_path = NSV("/"),
-    .nr_next = &route_static,
+    .nr_pattern = NSV("/(%d+)/def"),
+    .nr_next = nullptr,
     .nr_callback = serve_root};
 
 // =================================================================================
@@ -83,10 +70,7 @@ int main(int argc, char const *argv[argc])
   nori_log_set_level(config.nc_log_level);
 
   if (nori_str_view_eq(action, NSV("run"))) {
-    struct nori_server server = {
-        .config = config,
-        .router = route_root,
-    };
+    struct nori_server server = {.config = config, .route = route_root};
     status = nori_server_run(&server);
   } else {
     status = NORI_ERROR_EMIT(NORI_ERROR_INVALID_ARG, "Unknown action %s", action.view);
