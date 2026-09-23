@@ -14,15 +14,14 @@ static char const verify_lua[] = {
 #embed "./verify.lua"
     , '\0'};
 
-static struct nori_str_view constexpr FLAG_LEVEL_DEBUG = NSV("debug");
-static struct nori_str_view constexpr FLAG_LEVEL_INFO = NSV("info");
-static struct nori_str_view constexpr FLAG_LEVEL_NOTICE = NSV("notice");
-static struct nori_str_view constexpr FLAG_LEVEL_WARN = NSV("warn");
-static struct nori_str_view constexpr FLAG_LEVEL_ERROR = NSV("error");
+static struct nori_str constexpr FLAG_LEVEL_DEBUG = nori_str_lit("debug");
+static struct nori_str constexpr FLAG_LEVEL_INFO = nori_str_lit("info");
+static struct nori_str constexpr FLAG_LEVEL_NOTICE = nori_str_lit("notice");
+static struct nori_str constexpr FLAG_LEVEL_WARN = nori_str_lit("warn");
+static struct nori_str constexpr FLAG_LEVEL_ERROR = nori_str_lit("error");
 
-struct nori_status nori_config_load(
-    struct nori_str_view const path,
-    struct nori_config out[const static 1])
+struct nori_status
+nori_config_load(struct nori_str const path, struct nori_config out[const static 1])
 {
   memset(out, 0, sizeof(*out));
 
@@ -43,7 +42,7 @@ struct nori_status nori_config_load(
   }
 
   if (path.len > 0) {
-    if (luaL_loadfile(L, path.view)) {
+    if (luaL_loadfile(L, path.ss)) {
       status = NORI_ERROR_EMIT(
           NORI_ERROR_CONFIG, "Load user config: %s", lua_tostring(L, -1));
       goto cleanup;
@@ -85,17 +84,17 @@ struct nori_status nori_config_load(
     lua_getglobal(L, "LOG_LEVEL");
     size_t len = 0;
     const char *lua_val = lua_tolstring(L, -1, &len);
-    struct nori_str_view val = nori_str_view_create(lua_val, len);
+    struct nori_str val = nori_str_ref(lua_val, len);
 
-    if (nori_str_view_eq(val, FLAG_LEVEL_DEBUG)) {
+    if (nori_str_eq(val, FLAG_LEVEL_DEBUG)) {
       out->nc_log_level = NORI_LOG_LEVEL_DEBUG;
-    } else if (nori_str_view_eq(val, FLAG_LEVEL_INFO)) {
+    } else if (nori_str_eq(val, FLAG_LEVEL_INFO)) {
       out->nc_log_level = NORI_LOG_LEVEL_INFO;
-    } else if (nori_str_view_eq(val, FLAG_LEVEL_NOTICE)) {
+    } else if (nori_str_eq(val, FLAG_LEVEL_NOTICE)) {
       out->nc_log_level = NORI_LOG_LEVEL_NOTICE;
-    } else if (nori_str_view_eq(val, FLAG_LEVEL_WARN)) {
+    } else if (nori_str_eq(val, FLAG_LEVEL_WARN)) {
       out->nc_log_level = NORI_LOG_LEVEL_WARN;
-    } else if (nori_str_view_eq(val, FLAG_LEVEL_ERROR)) {
+    } else if (nori_str_eq(val, FLAG_LEVEL_ERROR)) {
       out->nc_log_level = NORI_LOG_LEVEL_ERROR;
     } else {
       nori_assert(false);

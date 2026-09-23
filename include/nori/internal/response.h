@@ -62,14 +62,14 @@ struct nori_response {
   // `lws_add_http_common_headers` separately.
   bool nr_common_flushed;
   enum nori_http_code nr_common_code;
-  struct nori_str_view nr_common_type;
-  struct nori_str_view nr_common_length;
+  struct nori_str nr_common_type;
+  struct nori_str nr_common_length;
   // A reference to the HTTP header that needs to be written out. Switch back to
   // the main context when this buffer is full so we can flush it.
   size_t nr_pending_headers_count;
   struct {
-    struct nori_str_view nr_key;
-    struct nori_str_view nr_val;
+    struct nori_str nr_key;
+    struct nori_str nr_val;
   } nr_pending_headers[NORI_RESPONSE_HEADER_THRESHOLD];
   // FD of in/out buffers to read/write the response into.
   int nr_fd_read;

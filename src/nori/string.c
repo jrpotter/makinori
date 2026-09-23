@@ -3,42 +3,44 @@
 
 #include "nori/string.h"
 
-struct nori_str_view nori_str_view_wrap(char const ss[static 1])
+// =================================================================================
+// Views
+
+struct nori_view const nori_view_ref(char const ss[static 1], size_t const len)
 {
-  size_t len = 0;
-  for (char const *p = ss; *p; ++p) {
-    len += 1;
+  size_t count = len;
+  if (len == 0) {
+    for (char const *p = ss; *p; ++p) {
+      count += 1;
+    }
   }
-  return nori_str_view_create(ss, len);
+  return (struct nori_view){.ss_ = ss, .len_ = count};
 }
 
-struct nori_str_view nori_str_view_create(char const ss[static 1], size_t const len)
-{
-  return (struct nori_str_view){.view = ss, .len = len};
-}
+bool nori_view_empty(struct nori_view const); // Emit inline
 
-struct nori_str_view
-nori_str_view_substr(struct nori_str_view const s, size_t const i, size_t const j)
+struct nori_view const
+nori_view_substr(struct nori_view const v, size_t const i, size_t const j)
 {
-  size_t const end = j < s.len ? j : s.len;
+  size_t const end = j < v.len_ ? j : v.len_;
 
-  struct nori_str_view substr = {};
+  struct nori_view substr = {};
   if (i < end) {
-    substr.len = end - i;
-    substr.view = s.view + i;
+    substr.len_ = end - i;
+    substr.ss_ = v.ss_ + i;
   }
 
   return substr;
 }
 
-bool nori_str_view_eq(struct nori_str_view const s1, struct nori_str_view const s2)
+bool nori_view_eq(struct nori_view const v1, struct nori_view const v2)
 {
-  if (s1.len != s2.len) {
+  if (v1.len_ != v2.len_) {
     return false;
   }
 
-  for (size_t i = 0; i < s1.len; ++i) {
-    if (s1.view[i] != s2.view[i]) {
+  for (size_t i = 0; i < v1.len_; ++i) {
+    if (v1.ss_[i] != v2.ss_[i]) {
       return false;
     }
   }
@@ -46,15 +48,15 @@ bool nori_str_view_eq(struct nori_str_view const s1, struct nori_str_view const 
   return true;
 }
 
-bool nori_str_view_ieq(struct nori_str_view const s1, struct nori_str_view const s2)
+bool nori_view_ieq(struct nori_view const v1, struct nori_view const v2)
 {
-  if (s1.len != s2.len) {
+  if (v1.len_ != v2.len_) {
     return false;
   }
 
-  for (size_t i = 0; i < s1.len; ++i) {
-    char a = s1.view[i];
-    char b = s2.view[i];
+  for (size_t i = 0; i < v1.len_; ++i) {
+    char a = v1.ss_[i];
+    char b = v2.ss_[i];
     a += (a >= 'A' && a <= 'Z') ? 'a' - 'A' : 0;
     b += (b >= 'A' && b <= 'Z') ? 'a' - 'A' : 0;
     if (a != b) {
@@ -64,3 +66,26 @@ bool nori_str_view_ieq(struct nori_str_view const s1, struct nori_str_view const
 
   return true;
 }
+
+// =================================================================================
+// Strings
+
+struct nori_str const nori_str_ref(char const ss[static 1], size_t const len)
+{
+  size_t count = len;
+  if (len == 0) {
+    for (char const *p = ss; *p; ++p) {
+      count += 1;
+    }
+  }
+  return (struct nori_str){.ss = ss, .len = count};
+}
+
+struct nori_view const nori_str_to_view(struct nori_str const); // Emit inline
+
+struct nori_view const
+nori_str_substr(struct nori_str const, size_t const, size_t const); // Emit inline
+
+bool nori_str_eq(struct nori_str const, struct nori_str const); // Emit inline
+
+bool nori_str_ieq(struct nori_str const, struct nori_str const); // Emit inline

@@ -24,21 +24,21 @@ enum nori_error {
 /// A representation of a success or failure.
 struct nori_status {
   enum nori_error ns_error;
-  struct nori_str_view ns_file;
-  struct nori_str_view ns_line;
+  struct nori_str ns_file;
+  struct nori_str ns_line;
 };
 
 #define NORI_SUCCESS                                                                   \
   ((struct nori_status){.ns_error = NORI_ERROR_NONE,                                   \
-                        .ns_file = NSV(__FILE__),                                      \
-                        .ns_line = NSV(CPP_STR(__LINE__))})
+                        .ns_file = nori_str_lit(__FILE__),                             \
+                        .ns_line = nori_str_lit(CPP_STR(__LINE__))})
 
 #define NORI_FAILURE(err)                                                              \
   ({                                                                                   \
     static_assert(err > NORI_ERROR_NONE, "Did you mean to use NORI_SUCCESS?");         \
     ((struct nori_status){.ns_error = err,                                             \
-                          .ns_file = NSV(__FILE__),                                    \
-                          .ns_line = NSV(CPP_STR(__LINE__))});                         \
+                          .ns_file = nori_str_lit(__FILE__),                           \
+                          .ns_line = nori_str_lit(CPP_STR(__LINE__))});                \
   })
 
 #define NORI_FAILURE_EMIT(err, lvl, msg, ...)                                          \

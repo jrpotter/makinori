@@ -19,9 +19,9 @@ enum nori_flag_arity {
 ///
 /// Refer to `NORI_FLAG_OPTIONS` for usage.
 struct nori_flag {
-  struct nori_str_view nf_vals[NORI_FLAG_ARITY_MAX];
-  struct nori_str_view nf_sflag;
-  struct nori_str_view nf_lflag;
+  struct nori_str nf_vals[NORI_FLAG_ARITY_MAX];
+  struct nori_str nf_sflag;
+  struct nori_str nf_lflag;
   enum nori_flag_arity nf_arity;
   bool nf_set;
 };
@@ -34,8 +34,8 @@ struct nori_flag {
 ///
 /// ```c
 /// static struct nori_flag FLAG_PORT = {
-///   .nf_sflag = NORI_VIEW("p"),
-///   .nf_lflag = NORI_VIEW("port"),
+///   .nf_sflag = nori_view_lit("p"),
+///   .nf_lflag = nori_view_lit("port"),
 ///   .nf_arity = NORI_FLAG_ARITY_ONE,
 /// };
 ///
@@ -64,9 +64,9 @@ extern struct nori_flag *NORI_FLAG_OPTIONS[];
 ///
 /// @param argc - A reference to `argc` passed to `main()`.
 /// @param argv - A reference to `argv` passed to `main()`.
-/// @out_param out_action - A reference to the single positional argument.
+/// @out_param out - A reference to the single positional argument.
 /// @return - `struct nori_status` indicating successful parsing.
 struct nori_status nori_cmdline_parse(
     int const argc,
     char const *argv[const argc],
-    struct nori_str_view out[static 1]);
+    struct nori_str out[static 1]);

@@ -3,11 +3,12 @@
 #include "nori/cmdline.h"
 #include "nori/util.h"
 
-static struct nori_flag *nori_flag_search(struct nori_str_view const key)
+static struct nori_flag *nori_flag_search(struct nori_view const key)
 {
   for (size_t i = 0; NORI_FLAG_OPTIONS[i]; ++i) {
     struct nori_flag *f = NORI_FLAG_OPTIONS[i];
-    if (nori_str_view_eq(key, f->nf_lflag) || nori_str_view_eq(key, f->nf_sflag)) {
+    if (nori_view_eq(key, nori_str_to_view(f->nf_lflag)) ||
+        nori_view_eq(key, nori_str_to_view(f->nf_sflag))) {
       return f;
     }
   }
@@ -17,17 +18,18 @@ static struct nori_flag *nori_flag_search(struct nori_str_view const key)
 struct nori_status nori_cmdline_parse(
     int const argc,
     char const *argv[const argc],
-    struct nori_str_view out[static 1])
+    struct nori_str out[static 1])
 {
   memset(out, 0, sizeof(*out));
 
   for (int i = 1; i < argc; ++i) {
-    struct nori_str_view arg = nori_str_view_wrap(argv[i]);
+    struct nori_str arg = nori_str_ref(argv[i], 0);
 
     if (argv[i][0] == '-') {
-      arg = nori_str_view_substr(arg, argv[i][1] == '-' ? 2 : 1, SIZE_MAX);
+      struct nori_view subarg =
+          nori_str_substr(arg, argv[i][1] == '-' ? 2 : 1, SIZE_MAX);
 
-      struct nori_flag *const flag = nori_flag_search(arg);
+      struct nori_flag *const flag = nori_flag_search(subarg);
       if (flag == nullptr) {
         return NORI_ERROR_EMIT(NORI_ERROR_CONFIG, "Unknown flag %s", argv[i]);
       } else if (i + flag->nf_arity >= argc) {
@@ -36,7 +38,7 @@ struct nori_status nori_cmdline_parse(
 
       flag->nf_set = true;
       for (size_t j = 0; j < flag->nf_arity; ++i, ++j) {
-        flag->nf_vals[j] = nori_str_view_wrap(argv[i + j + 1]);
+        flag->nf_vals[j] = nori_str_ref(argv[i + j + 1], 0);
       }
     } else if (out->len == 0) {
       *out = arg;

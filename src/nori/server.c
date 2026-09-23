@@ -112,7 +112,7 @@ static struct nori_status nori_write_lws_common(
 
   char const *content_type = "text/html";
   if (r->nr_common_type.len > 0) {
-    content_type = r->nr_common_type.view;
+    content_type = r->nr_common_type.ss;
   }
 
   // TODO: Actually use content response content length.
@@ -254,7 +254,7 @@ static int lws_http_callback(
           req->nr_path_, NORI_REQUEST_MAX_PATH_LEN - 1, "%s", (char const *)in);
 
       nori_assert(path_len > 0);
-      req->nr_path = nori_str_view_create(req->nr_path_, path_len);
+      req->nr_path = nori_str_ref(req->nr_path_, path_len);
 
       // Find the route that corresponds to our request. Also sets captures if
       // the route's pattern includes them.
@@ -265,7 +265,7 @@ static int lws_http_callback(
       }
 
       if (!route->nr_callback) { // TODO: This should return a 204.
-        nori_log_warn("No callback registered for %s", req->nr_path.view);
+        nori_log_warn("No callback registered for %s", req->nr_path.ss);
         return LWS_CLOSE;
       }
 
@@ -389,13 +389,13 @@ static int lws_http_callback(
 
       { // --- Flush pending headers -----------------------------------------------
         for (size_t i = 0; i < res->nr_pending_headers_count; ++i) {
-          struct nori_str_view header = res->nr_pending_headers[i].nr_key;
-          struct nori_str_view value = res->nr_pending_headers[i].nr_val;
+          struct nori_str header = res->nr_pending_headers[i].nr_key;
+          struct nori_str value = res->nr_pending_headers[i].nr_val;
           if (lws_add_http_header_by_name(
-                  wsi, (unsigned char const *)header.view,
-                  (unsigned char const *)value.view, value.len, &p, end)) {
+                  wsi, (unsigned char const *)header.ss,
+                  (unsigned char const *)value.ss, value.len, &p, end)) {
             res->nr_status = NORI_ERROR_EMIT(
-                NORI_ERROR_SYSTEM, "Could not write header %s", header.view);
+                NORI_ERROR_SYSTEM, "Could not write header %s", header.ss);
             return LWS_CLOSE;
           }
         }

@@ -23,8 +23,8 @@ enum nori_method {
 struct nori_request {
   enum nori_method nr_method;
   char nr_path_[NORI_REQUEST_MAX_PATH_LEN];
-  struct nori_str_view nr_path;
-  struct nori_str_view nr_captures[NORI_REQUEST_MAX_CAPTURES];
+  struct nori_str nr_path;
+  struct nori_view nr_captures[NORI_REQUEST_MAX_CAPTURES];
 };
 
 /// User-supplied callback registered within a `struct nori_route` instance.
@@ -56,7 +56,7 @@ nori_route_callback_t(struct nori_request const, struct nori_response *const);
 /// not match, it then checks against the static route.
 struct nori_route {
   enum nori_method nr_method;
-  struct nori_str_view nr_pattern;
+  struct nori_str nr_pattern;
   nori_route_callback_t *nr_callback;
   struct nori_route *nr_next;
 };

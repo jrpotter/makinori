@@ -22,8 +22,8 @@ nori_response_set_code(struct nori_response *const, enum nori_http_code code);
 /// Set an HTTP header value.
 struct nori_status nori_response_set_header(
     struct nori_response *const,
-    struct nori_str_view header,
-    struct nori_str_view value);
+    struct nori_str header,
+    struct nori_str value);
 
 /// Write buffer into the response body.
 struct nori_status nori_response_write(
@@ -33,4 +33,4 @@ struct nori_status nori_response_write(
 
 /// Write file contents into the response body.
 struct nori_status
-nori_response_write_file(struct nori_response *const res, struct nori_str_view path);
+nori_response_write_file(struct nori_response *const res, struct nori_str path);

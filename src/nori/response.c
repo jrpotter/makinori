@@ -62,8 +62,8 @@ nori_response_set_code(struct nori_response *const r, enum nori_http_code code)
 
 struct nori_status nori_response_set_header(
     struct nori_response *const r,
-    struct nori_str_view header,
-    struct nori_str_view value)
+    struct nori_str header,
+    struct nori_str value)
 {
   if (header.len == 0 || value.len == 0) {
     return NORI_FAILURE(NORI_ERROR_INVALID_ARG);
@@ -73,7 +73,7 @@ struct nori_status nori_response_set_header(
     return NORI_FAILURE(NORI_ERROR_IMMUTABLE);
   }
 
-  if (nori_str_view_ieq(header, NSV("Content-Type"))) {
+  if (nori_str_ieq(header, nori_str_lit("Content-Type"))) {
     if (r->nr_common_type.len > 0) {
       return NORI_FAILURE(NORI_ERROR_DUPLICATE);
     }
@@ -81,7 +81,7 @@ struct nori_status nori_response_set_header(
     return NORI_SUCCESS;
   }
 
-  if (nori_str_view_ieq(header, NSV("Content-Length"))) {
+  if (nori_str_ieq(header, nori_str_lit("Content-Length"))) {
     if (r->nr_common_length.len > 0) {
       return NORI_FAILURE(NORI_ERROR_DUPLICATE);
     }
@@ -173,13 +173,13 @@ struct nori_status nori_response_write(
 }
 
 struct nori_status
-nori_response_write_file(struct nori_response *const res, struct nori_str_view path)
+nori_response_write_file(struct nori_response *const res, struct nori_str path)
 {
   if (path.len == 0) {
     return NORI_FAILURE(NORI_ERROR_INVALID_ARG);
   }
 
-  int fd = open(path.view, O_RDONLY | O_NONBLOCK);
+  int fd = open(path.ss, O_RDONLY | O_NONBLOCK);
 
   if (fd == -1) {
     nori_perror("open");

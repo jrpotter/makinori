@@ -19,9 +19,9 @@ nori_route_validate(struct nori_route const route[const static 1])
   unsigned int capture_count = 0;
 
   for (size_t i = 0; i < route->nr_pattern.len; ++i) {
-    if (route->nr_pattern.view[i] == '%') {
+    if (route->nr_pattern.ss[i] == '%') {
       i += 1;
-    } else if (route->nr_pattern.view[i] == '(') {
+    } else if (route->nr_pattern.ss[i] == '(') {
       capture_count += 1;
     }
   }
@@ -29,22 +29,22 @@ nori_route_validate(struct nori_route const route[const static 1])
   if (capture_count > NORI_REQUEST_MAX_CAPTURES) {
     return NORI_WARN_EMIT(
         NORI_ERROR_INVALID_ARG, "Pattern %s has too many captures",
-        route->nr_pattern.view);
+        route->nr_pattern.ss);
   }
 
   return NORI_SUCCESS;
 }
 
-static struct nori_str_view
-find_substr(struct nori_str_view const path, struct nori_str_view const needle)
+static struct nori_view
+find_substr(struct nori_str const path, struct nori_str const needle)
 {
   for (int i = 0; i < path.len; ++i) {
-    struct nori_str_view substr = nori_str_view_substr(path, i, needle.len);
-    if (nori_str_view_eq(substr, needle)) {
+    struct nori_view substr = nori_str_substr(path, i, needle.len);
+    if (nori_view_eq(substr, nori_str_to_view(needle))) {
       return substr;
     }
   }
-  return NSV("");
+  return nori_str_to_view(nori_str_lit(""));
 }
 
 struct nori_route const *const nori_route_match(
@@ -83,8 +83,8 @@ struct nori_route const *const nori_route_match(
 
     lua_pushnil(L); // Sentinel
     lua_getglobal(L, "NoriAnchorStringMatch");
-    lua_pushlstring(L, req->nr_path.view, req->nr_path.len);
-    lua_pushlstring(L, curr->nr_pattern.view, curr->nr_pattern.len);
+    lua_pushlstring(L, req->nr_path.ss, req->nr_path.len);
+    lua_pushlstring(L, curr->nr_pattern.ss, curr->nr_pattern.len);
 
     if (lua_pcall(L, 2, LUA_MULTRET, 0)) {
       nori_log_warn("string.match: %s", lua_tostring(L, -1));
@@ -113,11 +113,11 @@ struct nori_route const *const nori_route_match(
     for (int i = 0; i < captured; ++i) {
       size_t len = 0;
       char const *capture = lua_tolstring(L, -1, &len);
-      struct nori_str_view needle = nori_str_view_create(capture, len);
+      struct nori_str needle = nori_str_ref(capture, len);
 
       // Pull the substring out of the request path for lifetime handling.
-      struct nori_str_view substr = find_substr(req->nr_path, needle);
-      nori_assert(substr.len > 0);
+      struct nori_view substr = find_substr(req->nr_path, needle);
+      nori_assert(!nori_view_empty(substr));
       req->nr_captures[captured - i - 1] = substr;
 
       lua_pop(L, 1);
