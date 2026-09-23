@@ -38,8 +38,8 @@ nori_route_validate(struct nori_route const route[const static 1])
 static struct nori_view
 find_substr(struct nori_str const path, struct nori_str const needle)
 {
-  for (int i = 0; i < path.len; ++i) {
-    struct nori_view substr = nori_str_substr(path, i, needle.len);
+  for (int i = 0; i < path.len - needle.len; ++i) {
+    struct nori_view substr = nori_str_substr(path, i, i + needle.len);
     if (nori_view_eq(substr, nori_str_to_view(needle))) {
       return substr;
     }
