@@ -1,5 +1,3 @@
-#include <lua5.4/lauxlib.h>
-#include <lua5.4/lualib.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -61,11 +59,11 @@ int main(int argc, char const *argv[argc])
     return EXIT_SUCCESS;
   }
 
-  lua_State *L = luaL_newstate();
-  luaL_openlibs(L);
+  nori_runtime_t *runtime = nori_runtime_create();
+  nori_assert(runtime);
 
   struct nori_config config = {};
-  status = nori_config_load(L, FLAG_CONFIG.nf_vals[0], &config);
+  status = nori_config_load(runtime, FLAG_CONFIG.nf_vals[0], &config);
   if (status.ns_error) {
     goto done;
   }
@@ -76,7 +74,7 @@ int main(int argc, char const *argv[argc])
 
   if (nori_str_eq(action, nori_str_lit("run"))) {
     struct nori_server server = {
-        .ns_lua = L,
+        .ns_runtime = runtime,
         .ns_config = config,
         .ns_route = route_root,
     };
@@ -86,6 +84,6 @@ int main(int argc, char const *argv[argc])
   }
 
 done:
-  lua_close(L);
+  nori_runtime_destroy(runtime);
   return status.ns_error ? EXIT_FAILURE : EXIT_SUCCESS;
 }

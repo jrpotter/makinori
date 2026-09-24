@@ -1,8 +1,7 @@
 #pragma once
 
-#include <lua5.4/lua.h>
-
 #include "nori/response.h"
+#include "nori/runtime.h"
 #include "nori/string.h"
 
 #ifndef NORI_REQUEST_MAX_PATH_LEN
@@ -68,6 +67,6 @@ struct nori_route {
 };
 
 struct nori_route const *const nori_route_match(
-    lua_State *const lua,
+    nori_runtime_t *const runtime,
     struct nori_route const route[const static 1],
     struct nori_request req[static 1]);

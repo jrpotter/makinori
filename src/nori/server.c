@@ -5,7 +5,7 @@
 #include <ucontext.h>
 #include <unistd.h>
 
-#include "nori/internal/response.h"
+#include "./response.h"
 #include "nori/logger.h"
 #include "nori/server.h"
 #include "nori/util.h"
@@ -259,7 +259,7 @@ static int lws_http_callback(
       // Find the route that corresponds to our request. Also sets captures if
       // the route's pattern includes them.
       struct nori_route const *const route =
-          nori_route_match(server->ns_lua, &server->ns_route, req);
+          nori_route_match(server->ns_runtime, &server->ns_route, req);
 
       if (route == nullptr) { // TODO: This should return a 404.
         return LWS_CLOSE;

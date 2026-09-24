@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "nori/internal/response.h"
+#include "./response.h"
 #include "nori/logger.h"
 #include "nori/response.h"
 #include "nori/util.h"

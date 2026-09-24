@@ -2,7 +2,12 @@ CC = clang
 CFLAGS = -Wall -Werror -std=c23 -Iinclude
 CPPFLAGS = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=202405L -D_GNU_SOURCE
 LDFLAGS =
-LDLIBS = -llua5.4 -lwebsockets
+LDLIBS = -lwebsockets
+
+# Lua specific dependencies. Update depending on your environment.
+# TODO: For installation, should look into something like `configure`.
+CFLAGS += -I/usr/include/lua5.4
+LDLIBS += -llua5.4
 
 # Automatically track dependencies. The -MMD flag creates a .d file with object
 # file dependencies at build time. We then -include any definition files that
