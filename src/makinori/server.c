@@ -6,9 +6,9 @@
 #include <unistd.h>
 
 #include "./response.h"
-#include "nori/logger.h"
-#include "nori/server.h"
-#include "nori/util.h"
+#include "makinori/logger.h"
+#include "makinori/server.h"
+#include "makinori/util.h"
 
 // =================================================================================
 // Signaling
@@ -33,23 +33,23 @@ static void server_signal_handler(int const signal)
 // =================================================================================
 // Coroutines
 
-struct nori_pss {
-  nori_route_callback_t *nc_callback;
-  struct nori_request nc_request;
-  struct nori_response nc_response;
+struct mn_pss {
+  mn_route_callback_t *nc_callback;
+  struct mn_request nc_request;
+  struct mn_response nc_response;
 };
 
-static thread_local struct nori_pss *coro_arg;
+static thread_local struct mn_pss *coro_arg;
 
 // Entrypoint for the coroutine. Arguments, if provided, must be `int`s which
 // may or may not be large enough to hold a pointer. As a workaround, use the
 // coroutine_arg variable.
 static void coro_start(void)
 {
-  struct nori_pss *pss = coro_arg;
+  struct mn_pss *pss = coro_arg;
   coro_arg = nullptr;
 
-  struct nori_response *const res = &pss->nc_response;
+  struct mn_response *const res = &pss->nc_response;
   res->nr_status = pss->nc_callback(pss->nc_request, res);
 
   // Finish transitioning through the state machine. It's possible the callback
@@ -57,55 +57,55 @@ static void coro_start(void)
   // always hit the .*_BODY condition since no function can be called from the
   // callback that transitions beyond .*_BODY.
 
-  if (res->nr_state == NORI_RESPONSE_STATE_HEADER) {
-    nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) HEADER -> HEADER_FLUSH", (void *){res});
-    res->nr_state = NORI_RESPONSE_STATE_HEADER_FLUSH;
-    struct nori_status status = nori_response_suspend(res);
-    if (status.ns_error) {
-      nori_log_error("Could not suspend coroutine");
+  if (res->nr_state == MN_RESPONSE_STATE_HEADER) {
+    mn_trace(MN_TRACE_RESPONSE_STATE, "(%p) HEADER -> HEADER_FLUSH", (void *){res});
+    res->nr_state = MN_RESPONSE_STATE_HEADER_FLUSH;
+    struct mn_status status = mn_response_suspend(res);
+    if (status.error) {
+      mn_log_error("Could not suspend coroutine");
       return;
     }
   }
 
-  if (res->nr_state == NORI_RESPONSE_STATE_HEADER_FLUSH) {
-    struct nori_status status = nori_response_suspend(res);
-    if (status.ns_error) {
-      nori_log_error("Could not suspend coroutine");
+  if (res->nr_state == MN_RESPONSE_STATE_HEADER_FLUSH) {
+    struct mn_status status = mn_response_suspend(res);
+    if (status.error) {
+      mn_log_error("Could not suspend coroutine");
       return;
     }
   }
 
-  if (res->nr_state == NORI_RESPONSE_STATE_BODY) {
-    nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) BODY -> BODY_FLUSH", (void *){res});
-    res->nr_state = NORI_RESPONSE_STATE_BODY_FLUSH;
-    struct nori_status status = nori_response_suspend(res);
-    if (status.ns_error) {
-      nori_log_error("Could not suspend coroutine");
+  if (res->nr_state == MN_RESPONSE_STATE_BODY) {
+    mn_trace(MN_TRACE_RESPONSE_STATE, "(%p) BODY -> BODY_FLUSH", (void *){res});
+    res->nr_state = MN_RESPONSE_STATE_BODY_FLUSH;
+    struct mn_status status = mn_response_suspend(res);
+    if (status.error) {
+      mn_log_error("Could not suspend coroutine");
       return;
     }
   }
 
-  if (res->nr_state == NORI_RESPONSE_STATE_BODY_FLUSH) {
-    struct nori_status status = nori_response_suspend(res);
-    if (status.ns_error) {
-      nori_log_error("Could not suspend coroutine");
+  if (res->nr_state == MN_RESPONSE_STATE_BODY_FLUSH) {
+    struct mn_status status = mn_response_suspend(res);
+    if (status.error) {
+      mn_log_error("Could not suspend coroutine");
       return;
     }
   }
 
-  nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) FINISHED", (void *){res});
+  mn_trace(MN_TRACE_RESPONSE_STATE, "(%p) FINISHED", (void *){res});
 }
 
 // =================================================================================
 // Server
 
-static struct nori_status nori_write_lws_common(
+static struct mn_status mn_write_lws_common(
     struct lws *const wsi,
-    struct nori_response *const r,
+    struct mn_response *const r,
     unsigned char **p,
     unsigned char *end)
 {
-  unsigned int code = NORI_HTTP_CODE_OK;
+  unsigned int code = MN_HTTP_CODE_OK;
   if (r->nr_common_code != 0) {
     code = r->nr_common_code;
   }
@@ -119,10 +119,10 @@ static struct nori_status nori_write_lws_common(
   lws_filepos_t content_len = LWS_ILLEGAL_HTTP_CONTENT_LEN;
 
   if (lws_add_http_common_headers(wsi, code, content_type, content_len, p, end)) {
-    return NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not write common headers");
+    return MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Could not write common headers");
   }
 
-  return NORI_SUCCESS;
+  return MN_SUCCESS;
 }
 
 // LWS's documentation is...lacking. From what I can tell, any nonzero value
@@ -130,76 +130,76 @@ static struct nori_status nori_write_lws_common(
 int constexpr LWS_CONTINUE = 0;
 int constexpr LWS_CLOSE = -1;
 
-static void nori_trace_callback(enum lws_callback_reasons reason)
+static void mn_trace_callback(enum lws_callback_reasons reason)
 {
   // Ordered in roughly the order the callbacks are triggered.
   switch (reason) {
   case LWS_CALLBACK_WSI_CREATE: {
-    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_WSI_CREATE");
+    mn_trace(MN_TRACE_LWS_CALLBACK, "LWS_CALLBACK_WSI_CREATE");
     break;
   }
   case LWS_CALLBACK_PROTOCOL_INIT: {
-    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_PROTOCOL_INIT");
+    mn_trace(MN_TRACE_LWS_CALLBACK, "LWS_CALLBACK_PROTOCOL_INIT");
     break;
   }
   case LWS_CALLBACK_FILTER_NETWORK_CONNECTION: {
-    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_FILTER_NETWORK_CONNECTION");
+    mn_trace(MN_TRACE_LWS_CALLBACK, "LWS_CALLBACK_FILTER_NETWORK_CONNECTION");
     break;
   }
   case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED: {
-    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED");
+    mn_trace(MN_TRACE_LWS_CALLBACK, "LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED");
     break;
   }
   case LWS_CALLBACK_EVENT_WAIT_CANCELLED: {
-    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_EVENT_WAIT_CANCELLED");
+    mn_trace(MN_TRACE_LWS_CALLBACK, "LWS_CALLBACK_EVENT_WAIT_CANCELLED");
     break;
   }
   case LWS_CALLBACK_FILTER_HTTP_CONNECTION: {
-    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_FILTER_HTTP_CONNECTION");
+    mn_trace(MN_TRACE_LWS_CALLBACK, "LWS_CALLBACK_FILTER_HTTP_CONNECTION");
     break;
   }
   case LWS_CALLBACK_HTTP_BIND_PROTOCOL: {
-    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP_BIND_PROTOCOL");
+    mn_trace(MN_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP_BIND_PROTOCOL");
     break;
   }
   case LWS_CALLBACK_CHECK_ACCESS_RIGHTS: {
-    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_CHECK_ACCESS_RIGHTS");
+    mn_trace(MN_TRACE_LWS_CALLBACK, "LWS_CALLBACK_CHECK_ACCESS_RIGHTS");
     break;
   }
   case LWS_CALLBACK_HTTP: {
-    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP");
+    mn_trace(MN_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP");
     break;
   }
   case LWS_CALLBACK_HTTP_BODY: {
-    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP_BODY");
+    mn_trace(MN_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP_BODY");
     break;
   }
   case LWS_CALLBACK_HTTP_BODY_COMPLETION: {
-    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP_BODY_COMPLETION");
+    mn_trace(MN_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP_BODY_COMPLETION");
     break;
   }
   case LWS_CALLBACK_HTTP_WRITEABLE: {
-    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP_WRITEABLE");
+    mn_trace(MN_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP_WRITEABLE");
     break;
   }
   case LWS_CALLBACK_HTTP_DROP_PROTOCOL: {
-    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP_DROP_PROTOCOL");
+    mn_trace(MN_TRACE_LWS_CALLBACK, "LWS_CALLBACK_HTTP_DROP_PROTOCOL");
     break;
   }
   case LWS_CALLBACK_CLOSED_HTTP: {
-    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_CLOSED_HTTP");
+    mn_trace(MN_TRACE_LWS_CALLBACK, "LWS_CALLBACK_CLOSED_HTTP");
     break;
   }
   case LWS_CALLBACK_PROTOCOL_DESTROY: {
-    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_PROTOCOL_DESTROY");
+    mn_trace(MN_TRACE_LWS_CALLBACK, "LWS_CALLBACK_PROTOCOL_DESTROY");
     break;
   }
   case LWS_CALLBACK_WSI_DESTROY: {
-    nori_trace(NORI_TRACE_LWS_CALLBACK, "LWS_CALLBACK_WSI_DESTROY");
+    mn_trace(MN_TRACE_LWS_CALLBACK, "LWS_CALLBACK_WSI_DESTROY");
     break;
   }
   default: {
-    nori_log_warn("Unmanaged callback %u", reason);
+    mn_log_warn("Unmanaged callback %u", reason);
     break;
   }
   }
@@ -218,31 +218,31 @@ static int lws_http_callback(
     errno = 0;
     PAGE_SIZE = sysconf(_SC_PAGESIZE);
     if (PAGE_SIZE == -1 && errno != 0) {
-      nori_perror("sysconf");
+      mn_perror("sysconf");
     }
     // Impossible to recover. Aborting is the only sensible choice.
-    nori_assert(PAGE_SIZE > 0);
+    mn_assert(PAGE_SIZE > 0);
   }
 
-  struct nori_pss *pss = user;
-  struct nori_request *const req = &pss->nc_request;
-  struct nori_response *const res = &pss->nc_response;
+  struct mn_pss *pss = user;
+  struct mn_request *const req = &pss->nc_request;
+  struct mn_response *const res = &pss->nc_response;
 
-  nori_trace_callback(reason);
+  mn_trace_callback(reason);
 
   // Ordered in roughly the same order the callbacks are triggered.
   switch (reason) {
   case LWS_CALLBACK_HTTP: {
-    memset(pss, 0, sizeof(struct nori_pss));
+    memset(pss, 0, sizeof(struct mn_pss));
 
     struct lws_protocols const *proto = lws_get_protocol(wsi);
-    struct nori_server const *const server = proto->user;
+    struct mn_server const *const server = proto->user;
 
     { // --- Route request ---------------------------------------------------------
       if (lws_hdr_total_length(wsi, WSI_TOKEN_GET_URI)) {
-        req->nr_method = NORI_METHOD_GET;
+        req->method = MN_METHOD_GET;
       } else { // TODO: Return a 500
-        nori_log_error("Unmanaged HTTP method");
+        mn_log_error("Unmanaged HTTP method");
         return LWS_CLOSE;
       }
 
@@ -250,37 +250,37 @@ static int lws_http_callback(
       // request path yields two different paths. The only exception is at root.
       // For example, `localhost:8000` and `localhost:8000/` both have path `/`.
       // TODO: Return 414 if longer than buffer.
-      int path_len = lws_snprintf(
-          req->nr_path_, NORI_REQUEST_MAX_PATH_LEN - 1, "%s", (char const *)in);
+      int path_len =
+          lws_snprintf(req->path_, MN_REQUEST_MAX_PATH_LEN - 1, "%s", (char const *)in);
 
-      nori_assert(path_len > 0);
-      req->nr_path = nori_str_ref(req->nr_path_, path_len);
+      mn_assert(path_len > 0);
+      req->path = mn_str_ref(req->path_, path_len);
 
       // Find the route that corresponds to our request. Also sets captures if
       // the route's pattern includes them.
-      struct nori_route const *const route =
-          nori_route_match(server->ns_runtime, &server->ns_route, req);
+      struct mn_route const *const route =
+          mn_route_match(server->runtime, &server->route, req);
 
       if (route == nullptr) { // TODO: This should return a 404.
         return LWS_CLOSE;
       }
 
-      if (!route->nr_callback) { // TODO: This should return a 204.
-        nori_log_warn("No callback registered for %s", req->nr_path.ss);
+      if (!route->callback) { // TODO: This should return a 204.
+        mn_log_warn("No callback registered for %s", req->path.ss);
         return LWS_CLOSE;
       }
 
-      pss->nc_callback = route->nr_callback;
+      pss->nc_callback = route->callback;
       res->nr_wsi = wsi;
-      res->nr_status = NORI_FAILURE(NORI_ERROR_SYSTEM);
-      res->nr_state = NORI_RESPONSE_STATE_HEADER;
+      res->nr_status = MN_FAILURE(MN_ERROR_SYSTEM);
+      res->nr_state = MN_RESPONSE_STATE_HEADER;
     }
 
     { // --- Connect descriptors ---------------------------------------------------
       int pipefd[2] = {};
       if (pipe2(pipefd, O_NONBLOCK) == -1) {
         // TODO: This should return a 500.
-        nori_perror("pipe2");
+        mn_perror("pipe2");
         return LWS_CLOSE;
       }
 
@@ -292,11 +292,11 @@ static int lws_http_callback(
 
       // Saves the content of the registers, signal mask, and the stack.
       if (getcontext(&res->nr_context) == -1) { // TODO: Return a 500.
-        nori_perror("getcontext");
+        mn_perror("getcontext");
         return LWS_CLOSE;
       }
 
-      size_t const stack_size = (PAGE_SIZE + 1) * server->ns_config.nc_co_pages;
+      size_t const stack_size = (PAGE_SIZE + 1) * server->config.coro_pages;
 
       // Allocate an additional page for use as a guard. As an extra precaution,
       // probably a good idea to pass -fstack-clas-protected enabled on
@@ -306,7 +306,7 @@ static int lws_http_callback(
           0);
 
       if (stack == MAP_FAILED) {
-        nori_perror("mmap");
+        mn_perror("mmap");
         return LWS_CLOSE;
       }
 
@@ -314,7 +314,7 @@ static int lws_http_callback(
       res->nr_co_stack = stack;
 
       if (mprotect(stack, PAGE_SIZE, PROT_NONE) == -1) {
-        nori_perror("mprotect");
+        mn_perror("mprotect");
         return LWS_CLOSE;
       }
 
@@ -327,9 +327,9 @@ static int lws_http_callback(
 
     { // --- Trigger first context switch ------------------------------------------
       coro_arg = pss; // Set before context switch.
-      res->nr_status = nori_response_resume(res);
-      if (res->nr_status.ns_error) {
-        nori_log_error("Could not resume coroutine");
+      res->nr_status = mn_response_resume(res);
+      if (res->nr_status.error) {
+        mn_log_error("Could not resume coroutine");
         return LWS_CLOSE;
       }
     }
@@ -356,32 +356,32 @@ static int lws_http_callback(
     // Unfortunately HTTP/1.0 cannot distinguish between a completed response
     // and a failure. At least with HTTP/1.1 and HTTP/2, there will be no
     // terminating chunk/frame so the client knows something happened.
-    if (res->nr_status.ns_error) {
+    if (res->nr_status.error) {
       return LWS_CLOSE;
     }
     // The event loop may trigger spurious writeable callbacks for internal
     // reasons. If our status is failed or state is closed, then we have already
     // cleaned up resources and there should be nothing left to do.
-    if (res->nr_state == NORI_RESPONSE_STATE_CLOSED) {
+    if (res->nr_state == MN_RESPONSE_STATE_CLOSED) {
       return LWS_CLOSE;
     }
 
-    uint8_t buffer[NORI_RESPONSE_BODY_THRESHOLD]; // HTTP does not need LWS_PRE
+    uint8_t buffer[MN_RESPONSE_BODY_THRESHOLD]; // HTTP does not need LWS_PRE
     uint8_t *start = buffer;
     uint8_t *p = start;
     uint8_t *end = buffer + sizeof(buffer) - 1;
 
     switch (res->nr_state) {
-    case NORI_RESPONSE_STATE_HEADER:
-    case NORI_RESPONSE_STATE_HEADER_FLUSH: {
+    case MN_RESPONSE_STATE_HEADER:
+    case MN_RESPONSE_STATE_HEADER_FLUSH: {
       { // --- Check if LWS "common" fields should be written ----------------------
         if (!res->nr_common_flushed &&
-            (res->nr_state == NORI_RESPONSE_STATE_HEADER_FLUSH ||
+            (res->nr_state == MN_RESPONSE_STATE_HEADER_FLUSH ||
              (res->nr_common_code != 0 && res->nr_common_type.len > 0 &&
               res->nr_common_length.len > 0))) {
-          res->nr_status = nori_write_lws_common(wsi, res, &p, end);
-          if (res->nr_status.ns_error) {
-            nori_log_error("Could not write common headers");
+          res->nr_status = mn_write_lws_common(wsi, res, &p, end);
+          if (res->nr_status.error) {
+            mn_log_error("Could not write common headers");
             return LWS_CLOSE;
           }
           res->nr_common_flushed = true;
@@ -390,13 +390,13 @@ static int lws_http_callback(
 
       { // --- Flush pending headers -----------------------------------------------
         for (size_t i = 0; i < res->nr_pending_headers_count; ++i) {
-          struct nori_str header = res->nr_pending_headers[i].nr_key;
-          struct nori_str value = res->nr_pending_headers[i].nr_val;
+          struct mn_str header = res->nr_pending_headers[i].nr_key;
+          struct mn_str value = res->nr_pending_headers[i].nr_val;
           if (lws_add_http_header_by_name(
                   wsi, (unsigned char const *)header.ss,
                   (unsigned char const *)value.ss, value.len, &p, end)) {
-            res->nr_status = NORI_ERROR_EMIT(
-                NORI_ERROR_SYSTEM, "Could not write header %s", header.ss);
+            res->nr_status =
+                MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Could not write header %s", header.ss);
             return LWS_CLOSE;
           }
         }
@@ -404,22 +404,21 @@ static int lws_http_callback(
       }
 
       { // --- Advance the state machine -------------------------------------------
-        if (res->nr_state == NORI_RESPONSE_STATE_HEADER_FLUSH) {
+        if (res->nr_state == MN_RESPONSE_STATE_HEADER_FLUSH) {
           if (lws_finalize_write_http_header(wsi, start, &p, end)) {
             res->nr_status =
-                NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not finalize http headers");
+                MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Could not finalize http headers");
             return LWS_CLOSE;
           }
-          nori_trace(
-              NORI_TRACE_RESPONSE_STATE, "(%p) HEADER_FLUSH -> BODY", (void *){res});
-          res->nr_state = NORI_RESPONSE_STATE_BODY;
+          mn_trace(MN_TRACE_RESPONSE_STATE, "(%p) HEADER_FLUSH -> BODY", (void *){res});
+          res->nr_state = MN_RESPONSE_STATE_BODY;
         }
       }
 
       { // --- Resume the coroutine ------------------------------------------------
-        res->nr_status = nori_response_resume(res);
-        if (res->nr_status.ns_error) {
-          nori_log_error("Could not resume coroutine");
+        res->nr_status = mn_response_resume(res);
+        if (res->nr_status.error) {
+          mn_log_error("Could not resume coroutine");
           return LWS_CLOSE;
         }
       }
@@ -430,19 +429,19 @@ static int lws_http_callback(
 
       return LWS_CONTINUE;
     }
-    case NORI_RESPONSE_STATE_BODY:
-    case NORI_RESPONSE_STATE_BODY_FLUSH: {
+    case MN_RESPONSE_STATE_BODY:
+    case MN_RESPONSE_STATE_BODY_FLUSH: {
       { // --- Attempt to read HTTP content ----------------------------------------
-        ssize_t n = read(res->nr_fd_read, p, NORI_RESPONSE_BODY_THRESHOLD);
+        ssize_t n = read(res->nr_fd_read, p, MN_RESPONSE_BODY_THRESHOLD);
 
         if (n == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
-          nori_perror("read");
-          res->nr_status = NORI_FAILURE(NORI_ERROR_SYSTEM);
+          mn_perror("read");
+          res->nr_status = MN_FAILURE(MN_ERROR_SYSTEM);
           return LWS_CLOSE;
         }
 
         if (n == 0) {
-          res->nr_status = NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Coroutine pipe closed");
+          res->nr_status = MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Coroutine pipe closed");
           return LWS_CLOSE;
         }
 
@@ -450,8 +449,7 @@ static int lws_http_callback(
           p += n;
           if (lws_write(wsi, start, lws_ptr_diff_size_t(p, start), LWS_WRITE_HTTP) !=
               lws_ptr_diff(p, start)) {
-            res->nr_status =
-                NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not write to body");
+            res->nr_status = MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Could not write to body");
             return LWS_CLOSE;
           }
           lws_callback_on_writable(wsi); // Immediately re-enter event loop.
@@ -460,24 +458,23 @@ static int lws_http_callback(
       }
 
       { // --- Advance the state machine -------------------------------------------
-        if (res->nr_state == NORI_RESPONSE_STATE_BODY_FLUSH) {
+        if (res->nr_state == MN_RESPONSE_STATE_BODY_FLUSH) {
           if (lws_write(
                   wsi, start, lws_ptr_diff_size_t(p, start), LWS_WRITE_HTTP_FINAL) !=
               lws_ptr_diff(p, start)) {
-            res->nr_status =
-                NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not write to body");
+            res->nr_status = MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Could not write to body");
             return LWS_CLOSE;
           }
-          nori_trace(
-              NORI_TRACE_RESPONSE_STATE, "(%p) BODY_FLUSH -> CLOSING", (void *){res});
-          res->nr_state = NORI_RESPONSE_STATE_CLOSING;
+          mn_trace(
+              MN_TRACE_RESPONSE_STATE, "(%p) BODY_FLUSH -> CLOSING", (void *){res});
+          res->nr_state = MN_RESPONSE_STATE_CLOSING;
         }
       }
 
       { // --- Resume the coroutine ------------------------------------------------
-        res->nr_status = nori_response_resume(res);
-        if (res->nr_status.ns_error) {
-          nori_log_error("Could not resume coroutine");
+        res->nr_status = mn_response_resume(res);
+        if (res->nr_status.error) {
+          mn_log_error("Could not resume coroutine");
           return LWS_CLOSE;
         }
       }
@@ -488,10 +485,10 @@ static int lws_http_callback(
 
       return LWS_CONTINUE;
     }
-    case NORI_RESPONSE_STATE_CLOSING: {
+    case MN_RESPONSE_STATE_CLOSING: {
       if (lws_http_transaction_completed(wsi)) {
-        nori_trace(NORI_TRACE_RESPONSE_STATE, "(%p) CLOSING -> CLOSED", (void *){res});
-        res->nr_state = NORI_RESPONSE_STATE_CLOSED;
+        mn_trace(MN_TRACE_RESPONSE_STATE, "(%p) CLOSING -> CLOSED", (void *){res});
+        res->nr_state = MN_RESPONSE_STATE_CLOSED;
       } else {
         // Otherwise the connection remains open. LWS is responsible for
         // logically separating each transaction over the connection and thereby
@@ -499,12 +496,12 @@ static int lws_http_callback(
       }
       [[fallthrough]];
     }
-    case NORI_RESPONSE_STATE_CLOSED: {
+    case MN_RESPONSE_STATE_CLOSED: {
       break;
     }
     }
 
-    if (res->nr_status.ns_error || res->nr_state == NORI_RESPONSE_STATE_CLOSED) {
+    if (res->nr_status.error || res->nr_state == MN_RESPONSE_STATE_CLOSED) {
       return LWS_CLOSE;
     }
 
@@ -514,22 +511,22 @@ static int lws_http_callback(
   case LWS_CALLBACK_CLOSED_HTTP: {
     if (res->nr_fd_read) {
       if (close(res->nr_fd_read) == -1) {
-        nori_perror("close");
+        mn_perror("close");
       }
       res->nr_fd_read = 0;
     }
     if (res->nr_fd_write) {
       if (close(res->nr_fd_write) == -1) {
-        nori_perror("close");
+        mn_perror("close");
       }
       res->nr_fd_write = 0;
     }
     if (res->nr_co_stack) {
       struct lws_protocols const *proto = lws_get_protocol(wsi);
-      struct nori_server const *const server = proto->user;
-      size_t const stack_size = (PAGE_SIZE + 1) * server->ns_config.nc_co_pages;
+      struct mn_server const *const server = proto->user;
+      size_t const stack_size = (PAGE_SIZE + 1) * server->config.coro_pages;
       if (munmap(res->nr_co_stack, stack_size) == -1) {
-        nori_perror("munmap"); // Indicate the leak but don't abort.
+        mn_perror("munmap"); // Indicate the leak but don't abort.
       }
       res->nr_co_stack = nullptr;
     }
@@ -548,12 +545,12 @@ static int lws_http_callback(
 // =================================================================================
 // Entrypoint
 
-struct nori_status nori_server_run(struct nori_server server[static 1])
+struct mn_status mn_server_run(struct mn_server server[static 1])
 {
   struct sigaction const act = {.sa_handler = server_signal_handler};
   if (sigaction(SIGINT, &act, nullptr) == -1) {
-    nori_perror("sigaction");
-    return NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not install signal handler");
+    mn_perror("sigaction");
+    return MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Could not install signal handler");
   };
 
   struct lws_protocols const http_protocol = {
@@ -561,7 +558,7 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
       .callback = lws_http_callback,
       .id = 0,
       .user = server,
-      .per_session_data_size = sizeof(struct nori_pss),
+      .per_session_data_size = sizeof(struct mn_pss),
       .rx_buffer_size = 0,
       .tx_packet_size = 0};
 
@@ -578,30 +575,30 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
   lws_context_info_defaults(&info, nullptr);
   info.mounts = &http_mount;
   info.options = LWS_SERVER_OPTION_EXPLICIT_VHOSTS;
-  info.port = server->ns_config.nc_port;
+  info.port = server->config.port;
   info.pprotocols = pprotocols;
   info.server_string = "maki";
   info.vhost_name = "localhost";
 
   struct lws_context *context = lws_create_context(&info);
   if (!context) {
-    return NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not create lws context");
+    return MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Could not create lws context");
   }
 
   struct lws_vhost *vh = lws_create_vhost(context, &info);
   if (!vh) {
-    return NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not create lws vhost");
+    return MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Could not create lws vhost");
   }
 
-  nori_log_notice("Starting server on port %ld", server->ns_config.nc_port);
+  mn_log_notice("Starting server on port %ld", server->config.port);
 
   int status = 0;
   while (status >= 0 && SERVER_RUNNING) {
     status = lws_service(context, /* unused */ 0);
   }
 
-  nori_log_notice("Stopping server");
+  mn_log_notice("Stopping server");
   lws_context_destroy(context);
 
-  return NORI_SUCCESS;
+  return MN_SUCCESS;
 }

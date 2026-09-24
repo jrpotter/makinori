@@ -1,57 +1,57 @@
 #include <libwebsockets.h>
 #include <stdarg.h>
 
-#include "nori/logger.h"
+#include "makinori/logger.h"
 
 // Relate together because they start with the same letter.
 #define LLL_PERROR LLL_PARSER
 #define LLL_TRACE LLL_THREAD
 
-void nori_log_set_level(enum nori_log_level const value)
+void mn_log_set_level(enum mn_log_level const value)
 {
   int lws_level = LLL_PERROR | LLL_TRACE;
 
-  if (value <= NORI_LOG_LEVEL_ERROR) {
+  if (value <= MN_LOG_LEVEL_ERROR) {
     lws_level |= LLL_ERR;
   }
-  if (value <= NORI_LOG_LEVEL_WARN) {
+  if (value <= MN_LOG_LEVEL_WARN) {
     lws_level |= LLL_WARN;
   }
-  if (value <= NORI_LOG_LEVEL_NOTICE) {
+  if (value <= MN_LOG_LEVEL_NOTICE) {
     lws_level |= LLL_NOTICE;
   }
-  if (value <= NORI_LOG_LEVEL_INFO) {
+  if (value <= MN_LOG_LEVEL_INFO) {
     lws_level |= LLL_INFO;
   }
-  if (value <= NORI_LOG_LEVEL_DEBUG) {
+  if (value <= MN_LOG_LEVEL_DEBUG) {
     lws_level |= LLL_DEBUG;
   }
 
   lws_set_log_level(lws_level, nullptr);
 }
 
-void nori_log_(enum nori_log_level const level, char const *const msg, ...)
+void mn_log_(enum mn_log_level const level, char const *const msg, ...)
 {
   va_list ap = {};
   va_start(ap, msg);
   switch (level) {
-  case NORI_LOG_LEVEL_DEBUG: {
+  case MN_LOG_LEVEL_DEBUG: {
     _lws_logv(LLL_DEBUG, msg, ap);
     break;
   }
-  case NORI_LOG_LEVEL_INFO: {
+  case MN_LOG_LEVEL_INFO: {
     _lws_logv(LLL_INFO, msg, ap);
     break;
   }
-  case NORI_LOG_LEVEL_NOTICE: {
+  case MN_LOG_LEVEL_NOTICE: {
     _lws_logv(LLL_NOTICE, msg, ap);
     break;
   }
-  case NORI_LOG_LEVEL_WARN: {
+  case MN_LOG_LEVEL_WARN: {
     _lws_logv(LLL_WARN, msg, ap);
     break;
   }
-  case NORI_LOG_LEVEL_ERROR: {
+  case MN_LOG_LEVEL_ERROR: {
     _lws_logv(LLL_ERR, msg, ap);
     break;
   }
@@ -59,7 +59,7 @@ void nori_log_(enum nori_log_level const level, char const *const msg, ...)
   va_end(ap);
 }
 
-void nori_trace_(bool tag, char const *const msg, ...)
+void mn_trace_(bool tag, char const *const msg, ...)
 {
 #ifndef NDEBUG
   if (tag) {
@@ -71,7 +71,7 @@ void nori_trace_(bool tag, char const *const msg, ...)
 #endif
 }
 
-void nori_perror_(char const *const msg, ...)
+void mn_perror_(char const *const msg, ...)
 {
   va_list ap = {};
   va_start(ap, msg);

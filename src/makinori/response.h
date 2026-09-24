@@ -7,8 +7,8 @@
 
 #include <ucontext.h>
 
-#include "nori/response.h"
-#include "nori/util.h"
+#include "makinori/response.h"
+#include "makinori/util.h"
 
 // Our choice of libwebsockets means we are bound to some of its design
 // decisions. In particular, unless we are willing to hold arbitrary amounts of
@@ -18,64 +18,64 @@
 // which actions are valid each time the callback is triggered. For instance,
 // once any content to the body is written, this state lets us know any attempts
 // to write headers should be met with an error.
-enum nori_response_state {
+enum mn_response_state {
   // Initial state indicating the user is writing headers.
   // Set by the main context.
-  NORI_RESPONSE_STATE_HEADER = 1,
+  MN_RESPONSE_STATE_HEADER = 1,
   // State indicating the user is about to write to the body. Pending headers
   // should be flushed at this point.
   // Set by the user context.
-  NORI_RESPONSE_STATE_HEADER_FLUSH = 2,
+  MN_RESPONSE_STATE_HEADER_FLUSH = 2,
   // State indicating the user is writing to the body.
   // Set by the main context.
-  NORI_RESPONSE_STATE_BODY = 3,
+  MN_RESPONSE_STATE_BODY = 3,
   // State indicating the user is finished. Pending contents should be flushed
   // at this point.
   // Set by the user context.
-  NORI_RESPONSE_STATE_BODY_FLUSH = 4,
+  MN_RESPONSE_STATE_BODY_FLUSH = 4,
   // State indicating the user-defined callback has finished.
   // Set by the main context.
-  NORI_RESPONSE_STATE_CLOSING = 5,
+  MN_RESPONSE_STATE_CLOSING = 5,
   // State indicating the user-defined callback has finished.
   // Set by the main context.
-  NORI_RESPONSE_STATE_CLOSED = 6,
+  MN_RESPONSE_STATE_CLOSED = 6,
 };
 
 // Maximum number of headers we store before forcing writing. A balancing act
 // between suspending too frequently and making every response a bit bigger.
-size_t constexpr NORI_RESPONSE_HEADER_THRESHOLD = 8;
+size_t constexpr MN_RESPONSE_HEADER_THRESHOLD = 8;
 
 // Size of the outbound buffer. Avoid making too large since otherwise LWS in
 // turn has to buffer any remaining value, requiring additional heap allocations
 // and generally slower processing.
-size_t constexpr NORI_RESPONSE_BODY_THRESHOLD = 4096;
+size_t constexpr MN_RESPONSE_BODY_THRESHOLD = 4096;
 
-struct nori_response {
+struct mn_response {
   // The lws context this response is associated with.
   struct lws *nr_wsi;
   // The return status of the user-defined callback.
-  struct nori_status nr_status;
+  struct mn_status nr_status;
   // The docstring for `lws_add_http_common_headers` indicates it should
   // be replaceable using just the LWS public API, but it isn't clear
   // how to do so. This utility seems to update private state that other
   // functions do not touch. As a workaround, save the fields needed by
   // `lws_add_http_common_headers` separately.
   bool nr_common_flushed;
-  enum nori_http_code nr_common_code;
-  struct nori_str nr_common_type;
-  struct nori_str nr_common_length;
+  enum mn_http_code nr_common_code;
+  struct mn_str nr_common_type;
+  struct mn_str nr_common_length;
   // A reference to the HTTP header that needs to be written out. Switch back to
   // the main context when this buffer is full so we can flush it.
   size_t nr_pending_headers_count;
   struct {
-    struct nori_str nr_key;
-    struct nori_str nr_val;
-  } nr_pending_headers[NORI_RESPONSE_HEADER_THRESHOLD];
+    struct mn_str nr_key;
+    struct mn_str nr_val;
+  } nr_pending_headers[MN_RESPONSE_HEADER_THRESHOLD];
   // FD of in/out buffers to read/write the response into.
   int nr_fd_read;
   int nr_fd_write;
   // Where in the state machine our coroutine is currently.
-  enum nori_response_state nr_state;
+  enum mn_response_state nr_state;
   // The stack state, register values, and the (unused) signal state.
   struct ucontext_t nr_context;
   // A memory-mapped region of size COROUTINE_PAGES + 1. The additional page
@@ -87,5 +87,5 @@ struct nori_response {
 // A reference to our main context. Every coroutine links back to this.
 extern thread_local ucontext_t context_server;
 
-struct nori_status nori_response_suspend(struct nori_response *const);
-struct nori_status nori_response_resume(struct nori_response *const);
+struct mn_status mn_response_suspend(struct mn_response *const);
+struct mn_status mn_response_resume(struct mn_response *const);

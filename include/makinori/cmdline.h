@@ -1,57 +1,57 @@
 #pragma once
 
-#include "nori/util.h"
+#include "makinori/util.h"
 
 /// The arity associated with a command line flag.
-enum nori_flag_arity {
-  NORI_FLAG_ARITY_ZERO = 0,
-  NORI_FLAG_ARITY_ONE = 1,
-  NORI_FLAG_ARITY_TWO = 2,
-  NORI_FLAG_ARITY_THREE = 3,
-  NORI_FLAG_ARITY_FOUR = 4,
-  NORI_FLAG_ARITY_FIVE = 5,
-  NORI_FLAG_ARITY_SIX = 6,
-  NORI_FLAG_ARITY_SEVEN = 7,
-  NORI_FLAG_ARITY_MAX,
+enum mn_flag_arity {
+  MN_FLAG_ARITY_ZERO = 0,
+  MN_FLAG_ARITY_ONE = 1,
+  MN_FLAG_ARITY_TWO = 2,
+  MN_FLAG_ARITY_THREE = 3,
+  MN_FLAG_ARITY_FOUR = 4,
+  MN_FLAG_ARITY_FIVE = 5,
+  MN_FLAG_ARITY_SIX = 6,
+  MN_FLAG_ARITY_SEVEN = 7,
+  MN_FLAG_ARITY_MAX,
 };
 
 /// The parsed representation of a command line flag.
 ///
-/// Refer to `NORI_FLAG_OPTIONS` for usage.
-struct nori_flag {
-  struct nori_str nf_vals[NORI_FLAG_ARITY_MAX];
-  struct nori_str nf_sflag;
-  struct nori_str nf_lflag;
-  enum nori_flag_arity nf_arity;
-  bool nf_set;
+/// Refer to `MN_FLAG_OPTIONS` for usage.
+struct mn_flag {
+  struct mn_str vals[MN_FLAG_ARITY_MAX];
+  struct mn_str sflag;
+  struct mn_str lflag;
+  enum mn_flag_arity arity;
+  bool set;
 };
 
 /// The user-defined command line flags.
 ///
-/// `struct nori_flag` instances should be supplied to the `NORI_FLAG_OPTIONS`
+/// `struct mn_flag` instances should be supplied to the `MN_FLAG_OPTIONS`
 /// array for command line parsing. For example, support for a singular port flag
 /// might look like the following:
 ///
 /// ```c
-/// static struct nori_flag FLAG_PORT = {
-///   .nf_sflag = nori_view_lit("p"),
-///   .nf_lflag = nori_view_lit("port"),
-///   .nf_arity = NORI_FLAG_ARITY_ONE,
+/// static struct mn_flag FLAG_PORT = {
+///   .nf_sflag = mn_view_lit("p"),
+///   .nf_lflag = mn_view_lit("port"),
+///   .nf_arity = MN_FLAG_ARITY_ONE,
 /// };
 ///
-/// struct nori_flag *NORI_FLAG_OPTIONS[] = {&FLAG_PORT, nullptr};
+/// struct mn_flag *MN_FLAG_OPTIONS[] = {&FLAG_PORT, nullptr};
 /// ```
 ///
-/// Afterwards a call to `nori_cmdline_parse()` is made. If -p or --port was
+/// Afterwards a call to `mn_cmdline_parse()` is made. If -p or --port was
 /// found in the command line (with the correct number of arguments as defined by
 /// the arity), `FLAG_PORT.nf_set` will be `true` and `FLAG_PORT.nf_vals[0]` will
 /// contain the singular argument.
-extern struct nori_flag *NORI_FLAG_OPTIONS[];
+extern struct mn_flag *MN_FLAG_OPTIONS[];
 
 /// A command line parsing utility.
 ///
 /// The command line allows at most one argument (called the "action") and any
-/// number of flags as specified in `NORI_FLAG_OPTIONS`. The following shows
+/// number of flags as specified in `MN_FLAG_OPTIONS`. The following shows
 /// examples of valid and invalid command line invocations:
 ///
 /// ```shell
@@ -65,8 +65,8 @@ extern struct nori_flag *NORI_FLAG_OPTIONS[];
 /// @param argc - A reference to `argc` passed to `main()`.
 /// @param argv - A reference to `argv` passed to `main()`.
 /// @out_param out - A reference to the single positional argument.
-/// @return - `struct nori_status` indicating successful parsing.
-struct nori_status nori_cmdline_parse(
+/// @return - `struct mn_status` indicating successful parsing.
+struct mn_status mn_cmdline_parse(
     int const argc,
     char const *argv[const argc],
-    struct nori_str out[static 1]);
+    struct mn_str out[static 1]);

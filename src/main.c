@@ -1,24 +1,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "nori.h"
+#include "makinori.h"
 
 // =================================================================================
 // Command Line
 
-static struct nori_flag FLAG_HELP = {
-    .nf_sflag = nori_str_lit("h"),
-    .nf_lflag = nori_str_lit("help"),
-    .nf_arity = NORI_FLAG_ARITY_ZERO,
+static struct mn_flag FLAG_HELP = {
+    .sflag = mn_str_lit("h"),
+    .lflag = mn_str_lit("help"),
+    .arity = MN_FLAG_ARITY_ZERO,
 };
 
-static struct nori_flag FLAG_CONFIG = {
-    .nf_sflag = nori_str_lit("c"),
-    .nf_lflag = nori_str_lit("config"),
-    .nf_arity = NORI_FLAG_ARITY_ONE,
+static struct mn_flag FLAG_CONFIG = {
+    .sflag = mn_str_lit("c"),
+    .lflag = mn_str_lit("config"),
+    .arity = MN_FLAG_ARITY_ONE,
 };
 
-struct nori_flag *NORI_FLAG_OPTIONS[] = {
+struct mn_flag *MN_FLAG_OPTIONS[] = {
     &FLAG_HELP,
     &FLAG_CONFIG,
     nullptr,
@@ -27,30 +27,30 @@ struct nori_flag *NORI_FLAG_OPTIONS[] = {
 // =================================================================================
 // Routes
 
-struct nori_status serve_root(struct nori_request req, struct nori_response *const res)
+struct mn_status serve_root(struct mn_request req, struct mn_response *const res)
 {
-  nori_log_info("Serving root");
-  return nori_response_write_file(res, nori_str_lit("./public/index.html"));
+  mn_log_info("Serving root");
+  return mn_response_write_file(res, mn_str_lit("./public/index.html"));
 }
 
-static struct nori_route route_root = {
-    .nr_method = NORI_METHOD_GET,
-    .nr_pattern = nori_str_lit("/"),
-    .nr_next = nullptr,
-    .nr_callback = serve_root};
+static struct mn_route route_root = {
+    .method = MN_METHOD_GET,
+    .pattern = mn_str_lit("/"),
+    .next = nullptr,
+    .callback = serve_root};
 
 // =================================================================================
 // Main
 
 int main(int argc, char const *argv[argc])
 {
-  struct nori_str action = {};
-  struct nori_status status = nori_cmdline_parse(argc, argv, &action);
-  if (status.ns_error) {
+  struct mn_str action = {};
+  struct mn_status status = mn_cmdline_parse(argc, argv, &action);
+  if (status.error) {
     return EXIT_FAILURE;
   }
 
-  if (action.len == 0 || FLAG_HELP.nf_set) {
+  if (action.len == 0 || FLAG_HELP.set) {
     printf(
         "Usage: %s [run]\n"
         "-h                   Print this help description.\n"
@@ -59,31 +59,31 @@ int main(int argc, char const *argv[argc])
     return EXIT_SUCCESS;
   }
 
-  nori_runtime_t *runtime = nori_runtime_create();
-  nori_assert(runtime);
+  mn_runtime_t *runtime = mn_runtime_create();
+  mn_assert(runtime);
 
-  struct nori_config config = {};
-  status = nori_config_load(runtime, FLAG_CONFIG.nf_vals[0], &config);
-  if (status.ns_error) {
+  struct mn_config config = {};
+  status = mn_config_load(runtime, FLAG_CONFIG.vals[0], &config);
+  if (status.error) {
     goto done;
   }
 
   // Logs emitted earlier are ERRORs so setting now behaves the same as if we
   // were to set it sooner.
-  nori_log_set_level(config.nc_log_level);
+  mn_log_set_level(config.log_level);
 
-  if (nori_str_eq(action, nori_str_lit("run"))) {
-    struct nori_server server = {
-        .ns_runtime = runtime,
-        .ns_config = config,
-        .ns_route = route_root,
+  if (mn_str_eq(action, mn_str_lit("run"))) {
+    struct mn_server server = {
+        .runtime = runtime,
+        .config = config,
+        .route = route_root,
     };
-    status = nori_server_run(&server);
+    status = mn_server_run(&server);
   } else {
-    status = NORI_ERROR_EMIT(NORI_ERROR_INVALID_ARG, "Unknown action %s", action.ss);
+    status = MN_ERROR_EMIT(MN_ERROR_INVALID_ARG, "Unknown action %s", action.ss);
   }
 
 done:
-  nori_runtime_destroy(runtime);
-  return status.ns_error ? EXIT_FAILURE : EXIT_SUCCESS;
+  mn_runtime_destroy(runtime);
+  return status.error ? EXIT_FAILURE : EXIT_SUCCESS;
 }

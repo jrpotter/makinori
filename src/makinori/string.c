@@ -1,12 +1,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "nori/string.h"
+#include "makinori/string.h"
 
 // =================================================================================
 // Views
 
-struct nori_view const nori_view_ref(char const ss[static 1], size_t const len)
+struct mn_view const mn_view_ref(char const ss[static 1], size_t const len)
 {
   size_t count = len;
   if (len == 0) {
@@ -14,17 +14,17 @@ struct nori_view const nori_view_ref(char const ss[static 1], size_t const len)
       count += 1;
     }
   }
-  return (struct nori_view){.ss_ = ss, .len_ = count};
+  return (struct mn_view){.ss_ = ss, .len_ = count};
 }
 
-bool nori_view_empty(struct nori_view const); // Emit inline
+bool mn_view_empty(struct mn_view const); // Emit inline
 
-struct nori_view const
-nori_view_substr(struct nori_view const v, size_t const i, size_t const j)
+struct mn_view const
+mn_view_substr(struct mn_view const v, size_t const i, size_t const j)
 {
   size_t const end = j < v.len_ ? j : v.len_;
 
-  struct nori_view substr = {};
+  struct mn_view substr = {};
   if (i < end) {
     substr.len_ = end - i;
     substr.ss_ = v.ss_ + i;
@@ -33,7 +33,7 @@ nori_view_substr(struct nori_view const v, size_t const i, size_t const j)
   return substr;
 }
 
-bool nori_view_eq(struct nori_view const v1, struct nori_view const v2)
+bool mn_view_eq(struct mn_view const v1, struct mn_view const v2)
 {
   if (v1.len_ != v2.len_) {
     return false;
@@ -48,7 +48,7 @@ bool nori_view_eq(struct nori_view const v1, struct nori_view const v2)
   return true;
 }
 
-bool nori_view_ieq(struct nori_view const v1, struct nori_view const v2)
+bool mn_view_ieq(struct mn_view const v1, struct mn_view const v2)
 {
   if (v1.len_ != v2.len_) {
     return false;
@@ -70,7 +70,7 @@ bool nori_view_ieq(struct nori_view const v1, struct nori_view const v2)
 // =================================================================================
 // Strings
 
-struct nori_str const nori_str_ref(char const ss[static 1], size_t const len)
+struct mn_str const mn_str_ref(char const ss[static 1], size_t const len)
 {
   size_t count = len;
   if (len == 0) {
@@ -78,14 +78,14 @@ struct nori_str const nori_str_ref(char const ss[static 1], size_t const len)
       count += 1;
     }
   }
-  return (struct nori_str){.ss = ss, .len = count};
+  return (struct mn_str){.ss = ss, .len = count};
 }
 
-struct nori_view const nori_str_to_view(struct nori_str const); // Emit inline
+struct mn_view const mn_str_to_view(struct mn_str const); // Emit inline
 
-struct nori_view const
-nori_str_substr(struct nori_str const, size_t const, size_t const); // Emit inline
+struct mn_view const
+mn_str_substr(struct mn_str const, size_t const, size_t const); // Emit inline
 
-bool nori_str_eq(struct nori_str const, struct nori_str const); // Emit inline
+bool mn_str_eq(struct mn_str const, struct mn_str const); // Emit inline
 
-bool nori_str_ieq(struct nori_str const, struct nori_str const); // Emit inline
+bool mn_str_ieq(struct mn_str const, struct mn_str const); // Emit inline
