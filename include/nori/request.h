@@ -1,5 +1,7 @@
 #pragma once
 
+#include <lua5.4/lua.h>
+
 #include "nori/response.h"
 #include "nori/string.h"
 
@@ -7,9 +9,13 @@
 #define NORI_REQUEST_MAX_PATH_LEN 2048
 #endif
 
+static_assert(NORI_REQUEST_MAX_PATH_LEN >= 256);
+
 #ifndef NORI_REQUEST_MAX_CAPTURES
 #define NORI_REQUEST_MAX_CAPTURES 16
 #endif
+
+static_assert(NORI_REQUEST_MAX_CAPTURES >= 0);
 
 /// A representation of supported HTTP methods.
 enum nori_method {
@@ -62,5 +68,6 @@ struct nori_route {
 };
 
 struct nori_route const *const nori_route_match(
+    lua_State *const lua,
     struct nori_route const route[const static 1],
     struct nori_request req[static 1]);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <lua5.4/lua.h>
+
 #include "nori/util.h"
 
 enum nori_event_loop {
@@ -22,5 +24,7 @@ struct nori_config {
 ///
 /// @param path The path of a user-supplied configuration file. Ignored if empty.
 /// @param out  The struct nori_config to initialize.
-struct nori_status
-nori_config_load(struct nori_str const path, struct nori_config out[const static 1]);
+struct nori_status nori_config_load(
+    lua_State *const lua,
+    struct nori_str const path,
+    struct nori_config out[const static 1]);

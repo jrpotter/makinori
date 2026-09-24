@@ -1,3 +1,5 @@
+#include <lua5.4/lauxlib.h>
+#include <lua5.4/lualib.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -35,7 +37,7 @@ struct nori_status serve_root(struct nori_request req, struct nori_response *con
 
 static struct nori_route route_root = {
     .nr_method = NORI_METHOD_GET,
-    .nr_pattern = nori_str_lit("/(%d+)/def"),
+    .nr_pattern = nori_str_lit("/"),
     .nr_next = nullptr,
     .nr_callback = serve_root};
 
@@ -59,8 +61,11 @@ int main(int argc, char const *argv[argc])
     return EXIT_SUCCESS;
   }
 
+  lua_State *L = luaL_newstate();
+  luaL_openlibs(L);
+
   struct nori_config config = {};
-  status = nori_config_load(FLAG_CONFIG.nf_vals[0], &config);
+  status = nori_config_load(L, FLAG_CONFIG.nf_vals[0], &config);
   if (status.ns_error) {
     goto done;
   }
@@ -70,12 +75,17 @@ int main(int argc, char const *argv[argc])
   nori_log_set_level(config.nc_log_level);
 
   if (nori_str_eq(action, nori_str_lit("run"))) {
-    struct nori_server server = {.config = config, .route = route_root};
+    struct nori_server server = {
+        .ns_lua = L,
+        .ns_config = config,
+        .ns_route = route_root,
+    };
     status = nori_server_run(&server);
   } else {
     status = NORI_ERROR_EMIT(NORI_ERROR_INVALID_ARG, "Unknown action %s", action.ss);
   }
 
 done:
+  lua_close(L);
   return status.ns_error ? EXIT_FAILURE : EXIT_SUCCESS;
 }

@@ -5,15 +5,12 @@
 #include "nori/string.h"
 #include "nori/util.h"
 
-static char const request_lua[] = {
-#embed "./request.lua"
-    , '\0'};
-
 static struct nori_status
 nori_route_validate(struct nori_route const route[const static 1])
 {
   if (route->nr_pattern.len == 0) {
-    return NORI_WARN_EMIT(NORI_ERROR_INVALID_ARG, "Route has empty pattern");
+    return NORI_WARN_EMIT(
+        NORI_ERROR_INVALID_ARG, "Encountered route with empty pattern");
   }
 
   unsigned int capture_count = 0;
@@ -28,8 +25,8 @@ nori_route_validate(struct nori_route const route[const static 1])
 
   if (capture_count > NORI_REQUEST_MAX_CAPTURES) {
     return NORI_WARN_EMIT(
-        NORI_ERROR_INVALID_ARG, "Pattern %s has too many captures",
-        route->nr_pattern.ss);
+        NORI_ERROR_INVALID_ARG, "Pattern %s has more captures than %d",
+        route->nr_pattern.ss, NORI_REQUEST_MAX_CAPTURES);
   }
 
   return NORI_SUCCESS;
@@ -38,7 +35,7 @@ nori_route_validate(struct nori_route const route[const static 1])
 static struct nori_view
 find_substr(struct nori_str const path, struct nori_str const needle)
 {
-  for (int i = 0; i < path.len - needle.len; ++i) {
+  for (int i = 0; i < path.len - needle.len + 1; ++i) {
     struct nori_view substr = nori_str_substr(path, i, i + needle.len);
     if (nori_view_eq(substr, nori_str_to_view(needle))) {
       return substr;
@@ -48,32 +45,22 @@ find_substr(struct nori_str const path, struct nori_str const needle)
 }
 
 struct nori_route const *const nori_route_match(
+    lua_State *const lua,
     struct nori_route const route[const static 1],
     struct nori_request req[static 1])
 {
-  static thread_local lua_State *L = nullptr;
-
-  if (L == nullptr) {
-    L = luaL_newstate();
-    luaL_openlibs(L);
-
-    // Add +1 because we use a sentinel (nil) to count the multiple return values.
-    nori_assert(lua_checkstack(L, NORI_REQUEST_MAX_CAPTURES + 1));
-
-    if (luaL_loadstring(L, request_lua)) {
-      nori_log_error("Load request.lua: %s", lua_tostring(L, -1));
-      exit(1);
-    }
-    if (lua_pcall(L, 0, 0, 0)) {
-      nori_log_error("Exec request.lua: %s", lua_tostring(L, -1));
-      exit(1);
-    }
-  }
-
   if (req->nr_path.len == 0) {
     nori_log_warn("No route matches an empty path");
     return nullptr;
   }
+
+  // Keep in mind lua_checkstack only grows the stack, never shrinks it. The
+  // default size should be able to accommodate our usage here.
+  nori_assert(lua_checkstack(lua, NORI_REQUEST_MAX_CAPTURES));
+
+  lua_getglobal(lua, "nori");
+
+  struct nori_route const *match = nullptr;
 
   for (struct nori_route const *curr = route; curr; curr = route->nr_next) {
     struct nori_status status = nori_route_validate(curr);
@@ -81,26 +68,24 @@ struct nori_route const *const nori_route_match(
       continue;
     }
 
-    lua_pushnil(L); // Sentinel
-    lua_getglobal(L, "NoriAnchorStringMatch");
-    lua_pushlstring(L, req->nr_path.ss, req->nr_path.len);
-    lua_pushlstring(L, curr->nr_pattern.ss, curr->nr_pattern.len);
+    lua_getfield(lua, -1, "anchor_string_match");
+    lua_pushlstring(lua, req->nr_path.ss, req->nr_path.len);
+    lua_pushlstring(lua, curr->nr_pattern.ss, curr->nr_pattern.len);
 
-    if (lua_pcall(L, 2, LUA_MULTRET, 0)) {
-      nori_log_warn("string.match: %s", lua_tostring(L, -1));
-      lua_pop(L, 1);
-      return nullptr;
+    if (lua_pcall(lua, 2, LUA_MULTRET, 0)) {
+      nori_log_warn("nori.anchor_string_match: %s", lua_tostring(lua, -1));
+      lua_pop(lua, 1);
+      break;
     }
 
     // Matcher returned nil meaning the path did not match the pattern.
-    if (lua_type(L, -1) == LUA_TNIL) {
-      lua_pop(L, 1); // Return
-      lua_pop(L, 1); // Sentinel
+    if (lua_type(lua, -1) == LUA_TNIL) {
+      lua_pop(lua, 1);
       continue;
     }
 
     int sentinel = -1;
-    while (lua_type(L, sentinel) == LUA_TSTRING) {
+    while (lua_type(lua, sentinel) == LUA_TSTRING) {
       sentinel -= 1;
     }
     int captured = -sentinel - 1;
@@ -112,7 +97,7 @@ struct nori_route const *const nori_route_match(
     // actually captured, it doesn't matter. We can just pick the first one.
     for (int i = 0; i < captured; ++i) {
       size_t len = 0;
-      char const *capture = lua_tolstring(L, -1, &len);
+      char const *capture = lua_tolstring(lua, -1, &len);
       struct nori_str needle = nori_str_ref(capture, len);
 
       // Pull the substring out of the request path for lifetime handling.
@@ -120,12 +105,13 @@ struct nori_route const *const nori_route_match(
       nori_assert(!nori_view_empty(substr));
       req->nr_captures[captured - i - 1] = substr;
 
-      lua_pop(L, 1);
+      lua_pop(lua, 1);
     }
 
-    lua_pop(L, 1); // Sentinel
-    return curr;
+    match = curr;
+    break;
   }
 
-  return nullptr;
+  lua_pop(lua, 1); // nori global
+  return match;
 }

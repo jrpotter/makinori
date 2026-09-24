@@ -258,7 +258,8 @@ static int lws_http_callback(
 
       // Find the route that corresponds to our request. Also sets captures if
       // the route's pattern includes them.
-      struct nori_route const *const route = nori_route_match(&server->route, req);
+      struct nori_route const *const route =
+          nori_route_match(server->ns_lua, &server->ns_route, req);
 
       if (route == nullptr) { // TODO: This should return a 404.
         return LWS_CLOSE;
@@ -295,7 +296,7 @@ static int lws_http_callback(
         return LWS_CLOSE;
       }
 
-      size_t const stack_size = (PAGE_SIZE + 1) * server->config.nc_co_pages;
+      size_t const stack_size = (PAGE_SIZE + 1) * server->ns_config.nc_co_pages;
 
       // Allocate an additional page for use as a guard. As an extra precaution,
       // probably a good idea to pass -fstack-clas-protected enabled on
@@ -526,7 +527,7 @@ static int lws_http_callback(
     if (res->nr_co_stack) {
       struct lws_protocols const *proto = lws_get_protocol(wsi);
       struct nori_server const *const server = proto->user;
-      size_t const stack_size = (PAGE_SIZE + 1) * server->config.nc_co_pages;
+      size_t const stack_size = (PAGE_SIZE + 1) * server->ns_config.nc_co_pages;
       if (munmap(res->nr_co_stack, stack_size) == -1) {
         nori_perror("munmap"); // Indicate the leak but don't abort.
       }
@@ -577,7 +578,7 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
   lws_context_info_defaults(&info, nullptr);
   info.mounts = &http_mount;
   info.options = LWS_SERVER_OPTION_EXPLICIT_VHOSTS;
-  info.port = server->config.nc_port;
+  info.port = server->ns_config.nc_port;
   info.pprotocols = pprotocols;
   info.server_string = "maki";
   info.vhost_name = "localhost";
@@ -592,7 +593,7 @@ struct nori_status nori_server_run(struct nori_server server[static 1])
     return NORI_ERROR_EMIT(NORI_ERROR_SYSTEM, "Could not create lws vhost");
   }
 
-  nori_log_notice("Starting server on port %ld", server->config.nc_port);
+  nori_log_notice("Starting server on port %ld", server->ns_config.nc_port);
 
   int status = 0;
   while (status >= 0 && SERVER_RUNNING) {

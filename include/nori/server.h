@@ -1,12 +1,15 @@
 #pragma once
 
+#include <lua5.4/lua.h>
+
 #include "nori/config.h"
 #include "nori/request.h"
 
 /// A representation of the server.
 struct nori_server {
-  struct nori_config config;
-  struct nori_route route;
+  lua_State *const ns_lua;
+  struct nori_config ns_config;
+  struct nori_route ns_route;
 };
 
 /// Entrypoint to start the server.
