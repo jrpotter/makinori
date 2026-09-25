@@ -15,6 +15,9 @@ struct mn_config {
   unsigned long port;            // PORT
 };
 
+struct mn_status
+mn_config_load(mn_runtime_t *const runtime, struct mn_config out[const static 1]);
+
 /// Load the base configuration state.
 ///
 /// This should be called even if no user-supplied configuration file at path
@@ -23,7 +26,7 @@ struct mn_config {
 ///
 /// @param path The path of a user-supplied configuration file. Ignored if empty.
 /// @param out  The struct mn_config to initialize.
-struct mn_status mn_config_load(
-    mn_runtime_t *const runtime,
+struct mn_status mn_config_load_with(
     struct mn_str const path,
+    mn_runtime_t *const runtime,
     struct mn_config out[const static 1]);

@@ -33,7 +33,7 @@ mn_runtime_t *const mn_runtime_create(void)
   return L;
 }
 
-void mn_runtime_destroy(mn_runtime_t *const rt)
+void mn_runtime_destroy(mn_runtime_t *const runtime)
 {
-  lua_close(rt);
+  lua_close(runtime);
 }

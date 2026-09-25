@@ -1,13 +1,24 @@
+# ==================================================================================
+# General
+
 CC = clang
 CFLAGS = -Wall -Werror -std=c23 -Iinclude
 CPPFLAGS = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=202405L -D_GNU_SOURCE
 LDFLAGS =
-LDLIBS = -lwebsockets
+LDLIBS =
 
-# Lua specific dependencies. Update depending on your environment.
-# TODO: For installation, should look into something like `configure`.
+# ==================================================================================
+# Configuration
+
 CFLAGS += -I/usr/include/lua5.4
-LDLIBS += -llua5.4
+LDLIBS += -lwebsockets -llua5.4
+
+# CPPFLAGS += -D_MN_REQUEST_MAX_PATH_LEN=2048
+# CPPFLAGS += -D_MN_REQUEST_MAX_CAPTURES=16
+# CPPFLAGS += -D_MN_REQUEST_MAX_QUERY_PARAMS=16
+
+# ==================================================================================
+# Dependencies
 
 # Automatically track dependencies. The -MMD flag creates a .d file with object
 # file dependencies at build time. We then -include any definition files that
@@ -22,7 +33,6 @@ CFLAGS += -MMD
 CFLAGS += -fstack-clash-protection
 
 # shell/find searches arbitrarily deep unlike wildcard.
-ASMS := $(patsubst %.c,%.s,$(shell find ./src -name "*.c"))
 OBJS += $(patsubst %.c,%.o,$(shell find ./src -name "*.c"))
 
 .PHONY: clean
@@ -39,14 +49,7 @@ release: CFLAGS += -O2
 release: CPPFLAGS += -DNDEBUG
 release: LDFLAGS += -s
 
-# Generate all the corresponding assembly files instead.
-asm: $(ASMS)
-
-%.s: %.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -S $<
-
 clean:
 	find . -name "*.d" -delete
 	find . -name "*.o" -delete
-	find . -name "*.s" -delete
 	-rm -r bin

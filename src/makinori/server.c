@@ -35,9 +35,9 @@ static void server_signal_handler(int const signal)
 // Coroutines
 
 struct mn_pss {
-  mn_route_callback_t *nc_callback;
-  struct mn_request nc_request;
-  struct mn_response nc_response;
+  mn_route_handler_t *handler;
+  struct mn_request request;
+  struct mn_response response;
 };
 
 static thread_local struct mn_pss *coro_arg;
@@ -50,17 +50,17 @@ static void coro_start(void)
   struct mn_pss *pss = coro_arg;
   coro_arg = nullptr;
 
-  struct mn_response *const res = &pss->nc_response;
-  res->nr_status = pss->nc_callback(pss->nc_request, res);
+  struct mn_response *const res = &pss->response;
+  res->status = pss->handler(pss->request, res);
 
-  // Finish transitioning through the state machine. It's possible the callback
+  // Finish transitioning through the state machine. It's possible the handler
   // does nothing at all in which case we are at the first state. We should
   // always hit the .*_BODY condition since no function can be called from the
-  // callback that transitions beyond .*_BODY.
+  // handler that transitions beyond .*_BODY.
 
-  if (res->nr_state == MN_RESPONSE_STATE_HEADER) {
+  if (res->state == MN_RESPONSE_STATE_HEADER) {
     mn_trace(MN_TRACE_RESPONSE_STATE, "(%p) HEADER -> HEADER_FLUSH", (void *){res});
-    res->nr_state = MN_RESPONSE_STATE_HEADER_FLUSH;
+    res->state = MN_RESPONSE_STATE_HEADER_FLUSH;
     struct mn_status status = mn_response_suspend(res);
     if (status.error) {
       mn_log_error("Could not suspend coroutine");
@@ -68,7 +68,7 @@ static void coro_start(void)
     }
   }
 
-  if (res->nr_state == MN_RESPONSE_STATE_HEADER_FLUSH) {
+  if (res->state == MN_RESPONSE_STATE_HEADER_FLUSH) {
     struct mn_status status = mn_response_suspend(res);
     if (status.error) {
       mn_log_error("Could not suspend coroutine");
@@ -76,9 +76,9 @@ static void coro_start(void)
     }
   }
 
-  if (res->nr_state == MN_RESPONSE_STATE_BODY) {
+  if (res->state == MN_RESPONSE_STATE_BODY) {
     mn_trace(MN_TRACE_RESPONSE_STATE, "(%p) BODY -> BODY_FLUSH", (void *){res});
-    res->nr_state = MN_RESPONSE_STATE_BODY_FLUSH;
+    res->state = MN_RESPONSE_STATE_BODY_FLUSH;
     struct mn_status status = mn_response_suspend(res);
     if (status.error) {
       mn_log_error("Could not suspend coroutine");
@@ -86,7 +86,7 @@ static void coro_start(void)
     }
   }
 
-  if (res->nr_state == MN_RESPONSE_STATE_BODY_FLUSH) {
+  if (res->state == MN_RESPONSE_STATE_BODY_FLUSH) {
     struct mn_status status = mn_response_suspend(res);
     if (status.error) {
       mn_log_error("Could not suspend coroutine");
@@ -107,13 +107,13 @@ static struct mn_status mn_write_lws_common(
     unsigned char *end)
 {
   unsigned int code = MN_HTTP_CODE_OK;
-  if (r->nr_common_code != 0) {
-    code = r->nr_common_code;
+  if (r->common_code != 0) {
+    code = r->common_code;
   }
 
   char const *content_type = "text/html";
-  if (r->nr_common_type.len > 0) {
-    content_type = r->nr_common_type.ss;
+  if (r->common_type.len > 0) {
+    content_type = r->common_type.ss;
   }
 
   // TODO: Actually use content response content length.
@@ -205,7 +205,7 @@ static void mn_trace_callback(enum lws_callback_reasons reason)
     break;
   }
   default: {
-    mn_log_warn("Unmanaged callback %u", reason);
+    mn_log_warn("Unmanaged lws callback %u", reason);
     break;
   }
   }
@@ -231,8 +231,8 @@ static int lws_http_callback(
   }
 
   struct mn_pss *pss = lws_user;
-  struct mn_request *const req = &pss->nc_request;
-  struct mn_response *const res = &pss->nc_response;
+  struct mn_request *const req = &pss->request;
+  struct mn_response *const res = &pss->response;
 
   mn_trace_callback(lws_reason);
 
@@ -330,16 +330,16 @@ static int lws_http_callback(
         return LWS_CLOSE;
       }
 
-      if (!route->callback) {
+      if (!route->handler) {
         // TODO: Return 204?
-        mn_log_warn("No callback registered for %s", (char const *){lws_in});
+        mn_log_warn("No handler registered for %s", (char const *){lws_in});
         return LWS_CLOSE;
       }
 
-      pss->nc_callback = route->callback;
-      res->nr_wsi = wsi;
-      res->nr_status = MN_FAILURE(MN_ERROR_SYSTEM);
-      res->nr_state = MN_RESPONSE_STATE_HEADER;
+      pss->handler = route->handler;
+      res->wsi = wsi;
+      res->status = MN_FAILURE(MN_ERROR_SYSTEM);
+      res->state = MN_RESPONSE_STATE_HEADER;
     }
 
     { // --- Connect descriptors ---------------------------------------------------
@@ -350,14 +350,14 @@ static int lws_http_callback(
         return LWS_CLOSE;
       }
 
-      res->nr_fd_read = pipefd[0];
-      res->nr_fd_write = pipefd[1];
+      res->fd_read = pipefd[0];
+      res->fd_write = pipefd[1];
     }
 
     { // --- Setup the coroutine ---------------------------------------------------
 
       // Saves the content of the registers, signal mask, and the stack.
-      if (getcontext(&res->nr_context) == -1) { // TODO: Return a 500.
+      if (getcontext(&res->context) == -1) { // TODO: Return a 500.
         mn_perror("getcontext");
         return LWS_CLOSE;
       }
@@ -377,24 +377,24 @@ static int lws_http_callback(
       }
 
       // Set before protection potentially fails so we munmap correctly.
-      res->nr_co_stack = stack;
+      res->coro_stack = stack;
 
       if (mprotect(stack, PAGE_SIZE, PROT_NONE) == -1) {
         mn_perror("mprotect");
         return LWS_CLOSE;
       }
 
-      sigemptyset(&res->nr_context.uc_sigmask);
-      res->nr_context.uc_stack.ss_sp = stack + PAGE_SIZE;
-      res->nr_context.uc_stack.ss_size = stack_size - PAGE_SIZE;
-      res->nr_context.uc_link = &context_server;
-      makecontext(&res->nr_context, coro_start, 0);
+      sigemptyset(&res->context.uc_sigmask);
+      res->context.uc_stack.ss_sp = stack + PAGE_SIZE;
+      res->context.uc_stack.ss_size = stack_size - PAGE_SIZE;
+      res->context.uc_link = &context_server;
+      makecontext(&res->context, coro_start, 0);
     }
 
     { // --- Trigger first context switch ------------------------------------------
       coro_arg = pss; // Set before context switch.
-      res->nr_status = mn_response_resume(res);
-      if (res->nr_status.error) {
+      res->status = mn_response_resume(res);
+      if (res->status.error) {
         mn_log_error("Could not resume coroutine");
         return LWS_CLOSE;
       }
@@ -422,13 +422,13 @@ static int lws_http_callback(
     // Unfortunately HTTP/1.0 cannot distinguish between a completed response
     // and a failure. At least with HTTP/1.1 and HTTP/2, there will be no
     // terminating chunk/frame so the client knows something happened.
-    if (res->nr_status.error) {
+    if (res->status.error) {
       return LWS_CLOSE;
     }
     // The event loop may trigger spurious writeable callbacks for internal
     // reasons. If our status is failed or state is closed, then we have already
     // cleaned up resources and there should be nothing left to do.
-    if (res->nr_state == MN_RESPONSE_STATE_CLOSED) {
+    if (res->state == MN_RESPONSE_STATE_CLOSED) {
       return LWS_CLOSE;
     }
 
@@ -437,53 +437,53 @@ static int lws_http_callback(
     uint8_t *p = start;
     uint8_t *end = buffer + sizeof(buffer) - 1;
 
-    switch (res->nr_state) {
+    switch (res->state) {
     case MN_RESPONSE_STATE_HEADER:
     case MN_RESPONSE_STATE_HEADER_FLUSH: {
       { // --- Check if LWS "common" fields should be written ----------------------
-        if (!res->nr_common_flushed &&
-            (res->nr_state == MN_RESPONSE_STATE_HEADER_FLUSH ||
-             (res->nr_common_code != 0 && res->nr_common_type.len > 0 &&
-              res->nr_common_length.len > 0))) {
-          res->nr_status = mn_write_lws_common(wsi, res, &p, end);
-          if (res->nr_status.error) {
+        if (!res->common_flushed &&
+            (res->state == MN_RESPONSE_STATE_HEADER_FLUSH ||
+             (res->common_code != 0 && res->common_type.len > 0 &&
+              res->common_length.len > 0))) {
+          res->status = mn_write_lws_common(wsi, res, &p, end);
+          if (res->status.error) {
             mn_log_error("Could not write common headers");
             return LWS_CLOSE;
           }
-          res->nr_common_flushed = true;
+          res->common_flushed = true;
         }
       }
 
       { // --- Flush pending headers -----------------------------------------------
-        for (size_t i = 0; i < res->nr_pending_headers_count; ++i) {
-          struct mn_str header = res->nr_pending_headers[i].nr_key;
-          struct mn_str value = res->nr_pending_headers[i].nr_val;
+        for (size_t i = 0; i < res->pending_headers_count; ++i) {
+          struct mn_str header = res->pending_headers[i].key;
+          struct mn_str value = res->pending_headers[i].val;
           if (lws_add_http_header_by_name(
                   wsi, (unsigned char const *)header.ss,
                   (unsigned char const *)value.ss, value.len, &p, end)) {
-            res->nr_status =
+            res->status =
                 MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Could not write header %s", header.ss);
             return LWS_CLOSE;
           }
         }
-        res->nr_pending_headers_count = 0;
+        res->pending_headers_count = 0;
       }
 
       { // --- Advance the state machine -------------------------------------------
-        if (res->nr_state == MN_RESPONSE_STATE_HEADER_FLUSH) {
+        if (res->state == MN_RESPONSE_STATE_HEADER_FLUSH) {
           if (lws_finalize_write_http_header(wsi, start, &p, end)) {
-            res->nr_status =
+            res->status =
                 MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Could not finalize http headers");
             return LWS_CLOSE;
           }
           mn_trace(MN_TRACE_RESPONSE_STATE, "(%p) HEADER_FLUSH -> BODY", (void *){res});
-          res->nr_state = MN_RESPONSE_STATE_BODY;
+          res->state = MN_RESPONSE_STATE_BODY;
         }
       }
 
       { // --- Resume the coroutine ------------------------------------------------
-        res->nr_status = mn_response_resume(res);
-        if (res->nr_status.error) {
+        res->status = mn_response_resume(res);
+        if (res->status.error) {
           mn_log_error("Could not resume coroutine");
           return LWS_CLOSE;
         }
@@ -498,16 +498,16 @@ static int lws_http_callback(
     case MN_RESPONSE_STATE_BODY:
     case MN_RESPONSE_STATE_BODY_FLUSH: {
       { // --- Attempt to read HTTP content ----------------------------------------
-        ssize_t n = read(res->nr_fd_read, p, MN_RESPONSE_BODY_THRESHOLD);
+        ssize_t n = read(res->fd_read, p, MN_RESPONSE_BODY_THRESHOLD);
 
         if (n == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
           mn_perror("read");
-          res->nr_status = MN_FAILURE(MN_ERROR_SYSTEM);
+          res->status = MN_FAILURE(MN_ERROR_SYSTEM);
           return LWS_CLOSE;
         }
 
         if (n == 0) {
-          res->nr_status = MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Coroutine pipe closed");
+          res->status = MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Coroutine pipe closed");
           return LWS_CLOSE;
         }
 
@@ -515,7 +515,7 @@ static int lws_http_callback(
           p += n;
           if (lws_write(wsi, start, lws_ptr_diff_size_t(p, start), LWS_WRITE_HTTP) !=
               lws_ptr_diff(p, start)) {
-            res->nr_status = MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Could not write to body");
+            res->status = MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Could not write to body");
             return LWS_CLOSE;
           }
           lws_callback_on_writable(wsi); // Immediately re-enter event loop.
@@ -524,22 +524,22 @@ static int lws_http_callback(
       }
 
       { // --- Advance the state machine -------------------------------------------
-        if (res->nr_state == MN_RESPONSE_STATE_BODY_FLUSH) {
+        if (res->state == MN_RESPONSE_STATE_BODY_FLUSH) {
           if (lws_write(
                   wsi, start, lws_ptr_diff_size_t(p, start), LWS_WRITE_HTTP_FINAL) !=
               lws_ptr_diff(p, start)) {
-            res->nr_status = MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Could not write to body");
+            res->status = MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Could not write to body");
             return LWS_CLOSE;
           }
           mn_trace(
               MN_TRACE_RESPONSE_STATE, "(%p) BODY_FLUSH -> CLOSING", (void *){res});
-          res->nr_state = MN_RESPONSE_STATE_CLOSING;
+          res->state = MN_RESPONSE_STATE_CLOSING;
         }
       }
 
       { // --- Resume the coroutine ------------------------------------------------
-        res->nr_status = mn_response_resume(res);
-        if (res->nr_status.error) {
+        res->status = mn_response_resume(res);
+        if (res->status.error) {
           mn_log_error("Could not resume coroutine");
           return LWS_CLOSE;
         }
@@ -554,7 +554,7 @@ static int lws_http_callback(
     case MN_RESPONSE_STATE_CLOSING: {
       if (lws_http_transaction_completed(wsi)) {
         mn_trace(MN_TRACE_RESPONSE_STATE, "(%p) CLOSING -> CLOSED", (void *){res});
-        res->nr_state = MN_RESPONSE_STATE_CLOSED;
+        res->state = MN_RESPONSE_STATE_CLOSED;
       } else {
         // Otherwise the connection remains open. LWS is responsible for
         // logically separating each transaction over the connection and thereby
@@ -567,7 +567,7 @@ static int lws_http_callback(
     }
     }
 
-    if (res->nr_status.error || res->nr_state == MN_RESPONSE_STATE_CLOSED) {
+    if (res->status.error || res->state == MN_RESPONSE_STATE_CLOSED) {
       return LWS_CLOSE;
     }
 
@@ -575,26 +575,26 @@ static int lws_http_callback(
   }
 
   case LWS_CALLBACK_CLOSED_HTTP: {
-    if (res->nr_fd_read) {
-      if (close(res->nr_fd_read) == -1) {
+    if (res->fd_read) {
+      if (close(res->fd_read) == -1) {
         mn_perror("close");
       }
-      res->nr_fd_read = 0;
+      res->fd_read = 0;
     }
-    if (res->nr_fd_write) {
-      if (close(res->nr_fd_write) == -1) {
+    if (res->fd_write) {
+      if (close(res->fd_write) == -1) {
         mn_perror("close");
       }
-      res->nr_fd_write = 0;
+      res->fd_write = 0;
     }
-    if (res->nr_co_stack) {
+    if (res->coro_stack) {
       struct lws_protocols const *proto = lws_get_protocol(wsi);
       struct mn_server const *const server = proto->user;
       size_t const stack_size = (PAGE_SIZE + 1) * server->config.coro_pages;
-      if (munmap(res->nr_co_stack, stack_size) == -1) {
+      if (munmap(res->coro_stack, stack_size) == -1) {
         mn_perror("munmap"); // Indicate the leak but don't abort.
       }
-      res->nr_co_stack = nullptr;
+      res->coro_stack = nullptr;
     }
     return LWS_CONTINUE;
   }

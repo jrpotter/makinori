@@ -27,7 +27,7 @@ struct mn_flag *MN_FLAG_OPTIONS[] = {
 // =================================================================================
 // Routes
 
-struct mn_status serve_root(struct mn_request req, struct mn_response *const res)
+static struct mn_status serve_root(struct mn_request req, struct mn_response *const res)
 {
   mn_log_info("Serving root");
   return mn_response_write_file(res, mn_str_lit("./public/index.html"));
@@ -37,7 +37,7 @@ static struct mn_route route_root = {
     .method = MN_METHOD_GET,
     .pattern = mn_str_lit("/"),
     .next = nullptr,
-    .callback = serve_root};
+    .handler = serve_root};
 
 // =================================================================================
 // Main
@@ -63,7 +63,7 @@ int main(int argc, char const *argv[argc])
   mn_assert(runtime);
 
   struct mn_config config = {};
-  status = mn_config_load(runtime, FLAG_CONFIG.vals[0], &config);
+  status = mn_config_load_with(FLAG_CONFIG.vals[0], runtime, &config);
   if (status.error) {
     goto done;
   }
@@ -74,10 +74,7 @@ int main(int argc, char const *argv[argc])
 
   if (mn_str_eq(action, mn_str_lit("run"))) {
     struct mn_server server = {
-        .runtime = runtime,
-        .config = config,
-        .route = route_root,
-    };
+        .runtime = runtime, .config = config, .route = route_root};
     status = mn_server_run(&server);
   } else {
     status = MN_ERROR_EMIT(MN_ERROR_INVALID_ARG, "Unknown action %s", action.ss);

@@ -19,9 +19,15 @@ static struct mn_str constexpr FLAG_LEVEL_NOTICE = mn_str_lit("notice");
 static struct mn_str constexpr FLAG_LEVEL_WARN = mn_str_lit("warn");
 static struct mn_str constexpr FLAG_LEVEL_ERROR = mn_str_lit("error");
 
-struct mn_status mn_config_load(
-    mn_runtime_t *const runtime,
+struct mn_status
+mn_config_load(mn_runtime_t *const runtime, struct mn_config out[const static 1])
+{
+  return mn_config_load_with(mn_str_lit(""), runtime, out);
+}
+
+struct mn_status mn_config_load_with(
     struct mn_str const path,
+    mn_runtime_t *const runtime,
     struct mn_config out[const static 1])
 {
   memset(out, 0, sizeof(*out));

@@ -18,9 +18,9 @@ static struct mn_flag *mn_flag_search(struct mn_view const key)
 struct mn_status mn_cmdline_parse(
     int const argc,
     char const *argv[const argc],
-    struct mn_str out[static 1])
+    struct mn_str action[static 1])
 {
-  memset(out, 0, sizeof(*out));
+  memset(action, 0, sizeof(*action));
 
   for (int i = 1; i < argc; ++i) {
     struct mn_str arg = mn_str_ref(argv[i], 0);
@@ -39,8 +39,8 @@ struct mn_status mn_cmdline_parse(
       for (size_t j = 0; j < flag->arity; ++i, ++j) {
         flag->vals[j] = mn_str_ref(argv[i + j + 1], 0);
       }
-    } else if (out->len == 0) {
-      *out = arg;
+    } else if (action->len == 0) {
+      *action = arg;
     } else {
       return MN_ERROR_EMIT(MN_ERROR_CONFIG, "Cannot specify > 1 action");
     }

@@ -1,7 +1,7 @@
 makinori
 ========
 
-Welcome to the makinori web framework. It is a small but fully-featured
+Welcome to the **makinori** web framework. It is a small but fully-featured
 framework, written in C and Lua, in which you can write web applications.
 It aspires to be as capable as `Django`_ and `Ruby on Rails`_, but with a
 significantly smaller footprint.
@@ -17,5 +17,5 @@ Documentation
 
    intro
    concepts/index
-   config/index
+   config
    reference/index

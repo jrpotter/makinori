@@ -5,8 +5,8 @@
 /// A mutable HTTP response object.
 ///
 /// Instances of this `struct` are created by the server and supplied to
-/// user-registered callbacks defined in the `struct mn_route`. The user
-/// is responsible for updating the response in the callback function.
+/// user-registered callbacks defined in the `struct mn_route`. The user is
+/// responsible for updating the response in the handler function.
 struct mn_response;
 
 /// A representation of the supported HTTP status codes.
@@ -26,9 +26,11 @@ struct mn_status mn_response_set_header(
     struct mn_str value);
 
 /// Write buffer into the response body.
-struct mn_status mn_response_write(
+struct mn_status mn_response_write(struct mn_response *const, struct mn_str output);
+
+struct mn_status mn_response_write_buffer(
     struct mn_response *const,
-    char buffer[const static 1],
+    char const buffer[const static 1],
     size_t const len);
 
 /// Write file contents into the response body.
