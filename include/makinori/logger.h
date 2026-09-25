@@ -1,7 +1,6 @@
 #pragma once
 
-#define CPP_PROXY(X) #X
-#define CPP_STR(X) CPP_PROXY(X)
+#include "makinori/macro.h"
 
 // Toggle on for debugging
 #define MN_TRACE_LWS_CALLBACK false
@@ -24,7 +23,8 @@ void mn_log_(enum mn_log_level const level, char const *const msg, ...);
 
 #define mn_log(level, msg, ...)                                                        \
   mn_log_(                                                                             \
-      (level), (__FILE__ ":" CPP_STR(__LINE__) ": " msg "")__VA_OPT__(, ) __VA_ARGS__)
+      (level),                                                                         \
+      (__FILE__ ":" MN_STR_TO(__LINE__) ": " msg "")__VA_OPT__(, ) __VA_ARGS__)
 
 #define mn_log_debug(msg, ...)                                                         \
   mn_log(MN_LOG_LEVEL_DEBUG, msg __VA_OPT__(, ) __VA_ARGS__)
@@ -59,7 +59,7 @@ void mn_trace_(bool tag, char const *const msg, ...);
 
 #define mn_trace(tag, msg, ...)                                                        \
   mn_trace_(                                                                           \
-      (tag), (__FILE__ ":" CPP_STR(__LINE__) ": " msg "")__VA_OPT__(, ) __VA_ARGS__)
+      (tag), (__FILE__ ":" MN_STR_TO(__LINE__) ": " msg "")__VA_OPT__(, ) __VA_ARGS__)
 
 /// A leaner and more consistently formatted perror alternative.
 [[gnu::__format__(__printf__, 1, 2)]]
@@ -67,5 +67,5 @@ void mn_perror_(char const *const msg, ...);
 
 #define mn_perror(msg, ...)                                                            \
   mn_perror_(                                                                          \
-      (__FILE__ ":" CPP_STR(__LINE__) ": [errno:%d] " msg ""),                         \
+      (__FILE__ ":" MN_STR_TO(__LINE__) ": [errno:%d] " msg ""),                       \
       errno __VA_OPT__(, ) __VA_ARGS__)

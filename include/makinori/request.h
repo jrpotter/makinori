@@ -16,6 +16,12 @@ static_assert(MN_REQUEST_MAX_PATH_LEN >= 256);
 
 static_assert(MN_REQUEST_MAX_CAPTURES >= 0);
 
+#ifndef MN_REQUEST_MAX_QUERY_PARAMS
+#define MN_REQUEST_MAX_QUERY_PARAMS 16
+#endif
+
+static_assert(MN_REQUEST_MAX_QUERY_PARAMS >= 0);
+
 /// A representation of supported HTTP methods.
 enum mn_method {
   MN_METHOD_GET,
@@ -27,9 +33,11 @@ enum mn_method {
 /// user-registered callbacks defined in the `struct mn_route`.
 struct mn_request {
   enum mn_method method;
-  char path_[MN_REQUEST_MAX_PATH_LEN];
-  struct mn_str path;
+  struct mn_str uri;
+  struct mn_view path;
+  MN_PAIR(struct mn_view, struct mn_view) query[MN_REQUEST_MAX_QUERY_PARAMS];
   struct mn_view captures[MN_REQUEST_MAX_CAPTURES];
+  char buffer_[MN_REQUEST_MAX_PATH_LEN];
 };
 
 /// User-supplied callback registered within a `struct mn_route` instance.

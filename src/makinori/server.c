@@ -7,6 +7,7 @@
 
 #include "./response.h"
 #include "makinori/logger.h"
+#include "makinori/request.h"
 #include "makinori/server.h"
 #include "makinori/util.h"
 
@@ -130,6 +131,11 @@ static struct mn_status mn_write_lws_common(
 int constexpr LWS_CONTINUE = 0;
 int constexpr LWS_CLOSE = -1;
 
+struct mn_method_map {
+  enum lws_token_indexes from;
+  enum mn_method to;
+};
+
 static void mn_trace_callback(enum lws_callback_reasons reason)
 {
   // Ordered in roughly the order the callbacks are triggered.
@@ -207,10 +213,10 @@ static void mn_trace_callback(enum lws_callback_reasons reason)
 
 static int lws_http_callback(
     struct lws *const wsi,
-    enum lws_callback_reasons reason,
-    void *user,
-    void *in,
-    size_t len)
+    enum lws_callback_reasons lws_reason,
+    void *lws_user,
+    void *lws_in,
+    size_t lws_len)
 {
   static long PAGE_SIZE = 0;
 
@@ -224,49 +230,109 @@ static int lws_http_callback(
     mn_assert(PAGE_SIZE > 0);
   }
 
-  struct mn_pss *pss = user;
+  struct mn_pss *pss = lws_user;
   struct mn_request *const req = &pss->nc_request;
   struct mn_response *const res = &pss->nc_response;
 
-  mn_trace_callback(reason);
+  mn_trace_callback(lws_reason);
 
   // Ordered in roughly the same order the callbacks are triggered.
-  switch (reason) {
+  switch (lws_reason) {
   case LWS_CALLBACK_HTTP: {
     memset(pss, 0, sizeof(struct mn_pss));
 
     struct lws_protocols const *proto = lws_get_protocol(wsi);
     struct mn_server const *const server = proto->user;
 
-    { // --- Route request ---------------------------------------------------------
-      if (lws_hdr_total_length(wsi, WSI_TOKEN_GET_URI)) {
-        req->method = MN_METHOD_GET;
-      } else { // TODO: Return a 500
-        mn_log_error("Unmanaged HTTP method");
-        return LWS_CLOSE;
+    { // --- Parse request ---------------------------------------------------------
+      int n = 0;
+      int count = 0;
+
+      { // --- Method & Path
+        MN_PAIR(enum lws_token_indexes, enum mn_method)
+        methods[] = {
+            {.fst = WSI_TOKEN_GET_URI, .snd = MN_METHOD_GET},
+        };
+
+        for (size_t i = 0; i <= MN_ARR_SIZE(methods); ++i) {
+          n = lws_hdr_copy(
+              wsi, req->buffer_ + count, MN_REQUEST_MAX_PATH_LEN - count,
+              methods[i].fst);
+
+          if (n > 0) {
+            req->method = methods[i].snd;
+            req->path = mn_view_ref(req->buffer_ + count, n);
+            count += n;
+            break;
+          } else if (n == -1) {
+            // TODO: Return 414
+            mn_log_warn("Request URI too large: %d >= %d", n, MN_REQUEST_MAX_PATH_LEN);
+            return LWS_CLOSE;
+          }
+        }
+
+        if (n == 0) {
+          // TODO: Return 501
+          mn_log_warn("Encountered unsupported HTTP method");
+          return LWS_CLOSE;
+        }
       }
 
-      // In LWS, the inclusion (or lack thereof) of a trailing `/` in the
-      // request path yields two different paths. The only exception is at root.
-      // For example, `localhost:8000` and `localhost:8000/` both have path `/`.
-      // TODO: Return 414 if longer than buffer.
-      int path_len =
-          lws_snprintf(req->path_, MN_REQUEST_MAX_PATH_LEN - 1, "%s", (char const *)in);
+      { // --- Query Params
+        int frag_index = 0;
+        do {
+          n = lws_hdr_copy_fragment(
+              // Offset by 1 so we can insert a delimiter. Insert after this call
+              // so we are notified if there is room left in our buffer first.
+              wsi, req->buffer_ + count + 1, MN_REQUEST_MAX_PATH_LEN - count - 1,
+              WSI_TOKEN_HTTP_URI_ARGS, frag_index);
 
-      mn_assert(path_len > 0);
-      req->path = mn_str_ref(req->path_, path_len);
+          if (n == -2) {
+            // TODO: Return 414
+            mn_log_warn("Request URI too large: %d >= %d", n, MN_REQUEST_MAX_PATH_LEN);
+            return LWS_CLOSE;
+          }
+
+          if (n > 0) {
+            if (frag_index + 1 >= MN_REQUEST_MAX_QUERY_PARAMS) {
+              // TODO: Return 414?
+              mn_log_warn(
+                  "Request URI too large: %d >= %d", n, MN_REQUEST_MAX_PATH_LEN);
+              return LWS_CLOSE;
+            }
+
+            req->buffer_[count] = frag_index == 0 ? '?' : '&';
+
+            // Find key/value separator.
+            size_t offset = count + 1;
+            while (offset < n + count + 1 && req->buffer_[offset] != '=') {
+              offset += 1;
+            }
+
+            req->query[frag_index].fst =
+                mn_view_ref(req->buffer_ + count + 1, offset - count - 1);
+            req->query[frag_index].snd =
+                mn_view_ref(req->buffer_ + offset + 1, n - offset + 1);
+
+            frag_index += 1;
+            count += n + 1;
+          }
+        } while (n >= 0);
+      }
 
       // Find the route that corresponds to our request. Also sets captures if
       // the route's pattern includes them.
       struct mn_route const *const route =
           mn_route_match(server->runtime, &server->route, req);
 
-      if (route == nullptr) { // TODO: This should return a 404.
+      if (route == nullptr) {
+        // TODO: Return 404
         return LWS_CLOSE;
       }
 
-      if (!route->callback) { // TODO: This should return a 204.
-        mn_log_warn("No callback registered for %s", req->path.ss);
+      if (!route->callback) {
+        // TODO: Return 204?
+        mn_log_warn("No callback registered for %s", (char const *){lws_in});
         return LWS_CLOSE;
       }
 
@@ -539,7 +605,7 @@ static int lws_http_callback(
   }
 
   // TODO: Add a better 404 handler.
-  return lws_callback_http_dummy(wsi, reason, user, in, len);
+  return lws_callback_http_dummy(wsi, lws_reason, lws_user, lws_in, lws_len);
 }
 
 // =================================================================================
@@ -564,6 +630,9 @@ struct mn_status mn_server_run(struct mn_server server[static 1])
 
   struct lws_protocols const *pprotocols[] = {&http_protocol, nullptr};
 
+  // The inclusion (or lack thereof) of a trailing / in the request path
+  // yields two different paths. The only exception is at root. For example,
+  // localhost:8000 and localhost:8000/ both have path /.
   struct lws_http_mount const http_mount = {
       .protocol = "http",
       .mountpoint = "",

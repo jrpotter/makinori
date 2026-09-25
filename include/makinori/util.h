@@ -5,6 +5,7 @@
 #endif
 
 #include "makinori/logger.h"
+#include "makinori/macro.h"
 #include "makinori/string.h"
 
 enum mn_error {
@@ -31,14 +32,14 @@ struct mn_status {
 #define MN_SUCCESS                                                                     \
   ((struct mn_status){.error = MN_ERROR_NONE,                                          \
                       .file = mn_str_lit(__FILE__),                                    \
-                      .line = mn_str_lit(CPP_STR(__LINE__))})
+                      .line = mn_str_lit(MN_STR_TO(__LINE__))})
 
 #define MN_FAILURE(err)                                                                \
   ({                                                                                   \
     static_assert(err > MN_ERROR_NONE, "Did you mean to use MN_SUCCESS?");             \
     ((struct mn_status){.error = err,                                                  \
                         .file = mn_str_lit(__FILE__),                                  \
-                        .line = mn_str_lit(CPP_STR(__LINE__))});                       \
+                        .line = mn_str_lit(MN_STR_TO(__LINE__))});                     \
   })
 
 #define MN_FAILURE_EMIT(err, lvl, msg, ...)                                            \
