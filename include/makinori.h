@@ -3,6 +3,7 @@
 #include "makinori/cmdline.h"  // IWYU pragma: export
 #include "makinori/config.h"   // IWYU pragma: export
 #include "makinori/logger.h"   // IWYU pragma: export
+#include "makinori/macro.h"    // IWYU pragma: export
 #include "makinori/request.h"  // IWYU pragma: export
 #include "makinori/response.h" // IWYU pragma: export
 #include "makinori/runtime.h"  // IWYU pragma: export
