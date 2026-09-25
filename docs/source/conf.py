@@ -1,10 +1,10 @@
 # =================================================================================
 # Project information
 
-from datetime import datetime
+import datetime
 
 project = 'makinori'
-copyright = f'{datetime.now().year}, Joshua Potter'
+copyright = f'{datetime.datetime.now(datetime.timezone.utc).year}, Joshua Potter'
 author = 'Joshua Potter'
 release = '0.1.0'
 
@@ -12,7 +12,6 @@ release = '0.1.0'
 # General configuration
 
 extensions = []
-
 templates_path = ['_templates']
 exclude_patterns = []
 

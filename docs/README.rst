@@ -1,8 +1,15 @@
 makinori documentation
 ======================
 
-Documentation is generated using `sphinx`_. Follow the installation `directions`_
-for your platform and then run ``make html``.
+Documentation is generated using `sphinx`_. To get started, create a virtual
+environment and install the listed python dependencies within it:
 
 .. _sphinx: https://www.sphinx-doc.org/
-.. _directions: https://www.sphinx-doc.org/en/master/usage/installation.html
+
+.. code-block:: sh
+
+   $ python3 -m venv .venv
+   $ source .venv/bin/activate
+   $ pip install -r requirements.txt
+
+You can now run ``make`` to output the documentation in your desired format.
