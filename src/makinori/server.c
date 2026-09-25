@@ -646,7 +646,7 @@ struct mn_status mn_server_run(struct mn_server server[static 1])
   info.options = LWS_SERVER_OPTION_EXPLICIT_VHOSTS;
   info.port = server->config.port;
   info.pprotocols = pprotocols;
-  info.server_string = "maki";
+  info.server_string = "makinori";
   info.vhost_name = "localhost";
 
   struct lws_context *context = lws_create_context(&info);

@@ -9,7 +9,13 @@ significantly smaller footprint.
 .. _Django: https://djangoproject.com
 .. _Ruby on Rails: https://rubyonrails.org
 
+Documentation
+-------------
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
+   intro
+   concepts/index
+   config/index
+   reference/index
