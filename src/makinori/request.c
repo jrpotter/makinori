@@ -4,31 +4,6 @@
 #include "makinori/string.h"
 #include "makinori/util.h"
 
-static struct mn_status mn_route_validate(struct mn_route const route[const static 1])
-{
-  if (route->pattern.len == 0) {
-    return MN_WARN_EMIT(MN_ERROR_INVALID_ARG, "Encountered route with empty pattern");
-  }
-
-  unsigned int count = 0;
-
-  for (size_t i = 0; i < route->pattern.len; ++i) {
-    if (route->pattern.ss[i] == '%') {
-      i += 1;
-    } else if (route->pattern.ss[i] == '(') {
-      count += 1;
-    }
-  }
-
-  if (count > MN_REQUEST_MAX_CAPTURES) {
-    return MN_WARN_EMIT(
-        MN_ERROR_INVALID_ARG, "Pattern %s has more captures than %d", route->pattern.ss,
-        MN_REQUEST_MAX_CAPTURES);
-  }
-
-  return MN_SUCCESS;
-}
-
 static struct mn_view
 find_substr(struct mn_view const path, struct mn_view const needle)
 {
@@ -56,13 +31,31 @@ struct mn_route const *const mn_route_match(
   struct mn_route const *match = nullptr;
 
   for (struct mn_route const *curr = route; curr; curr = route->next) {
-    struct mn_status status = mn_route_validate(curr);
-    if (status.error) {
+    if (route->pattern.len == 0) {
+      mn_log_warn("Encountered route with empty pattern");
+      continue;
+    }
+
+    size_t expected_count = 0;
+    for (size_t i = 0; i < route->pattern.len; ++i) {
+      if (route->pattern.ss[i] == '%') {
+        i += 1;
+      } else if (route->pattern.ss[i] == '(') {
+        expected_count += 1;
+      }
+    }
+
+    // Must abort this path. We configured the amount of virtual stack space
+    // according to MN_REQUEST_MAX_CAPTURES.
+    if (expected_count > MN_REQUEST_MAX_CAPTURES) {
+      mn_log_warn(
+          "Pattern %s has more captures than %d", route->pattern.ss,
+          MN_REQUEST_MAX_CAPTURES);
       continue;
     }
 
     lua_getfield(config->lua_, -1, "anchor_string_match");
-    // Use of ss_ is safe here since we also pass the length.
+    // Use of ss_ is safe since we also pass the length.
     lua_pushlstring(config->lua_, req->path.ss_, req->path.len);
     lua_pushlstring(config->lua_, curr->pattern.ss, curr->pattern.len);
 
@@ -72,33 +65,35 @@ struct mn_route const *const mn_route_match(
       break;
     }
 
-    // Matcher returned nil meaning the path did not match the pattern.
+    // On a failed match, string.match returns nil.
     if (lua_type(config->lua_, -1) == LUA_TNIL) {
       lua_pop(config->lua_, 1);
       continue;
     }
 
-    int sentinel = -1;
-    while (lua_type(config->lua_, sentinel) == LUA_TSTRING) {
-      sentinel -= 1;
+    // On a successful match with no specificed captures, it returns the entire
+    // string. Otherwise it returns one or more substrings corresponding to
+    // each capture.
+    int result_count = 0;
+    while (lua_type(config->lua_, -result_count - 1) == LUA_TSTRING) {
+      result_count += 1;
     }
-    int results = -sentinel - 1;
-    mn_assert(results <= MN_REQUEST_MAX_CAPTURES);
+    req->capture_count = expected_count == 0 && result_count == 1 ? 0 : result_count;
+    mn_assert(expected_count == req->capture_count);
+    mn_assert(req->capture_count <= MN_REQUEST_MAX_CAPTURES);
 
     // We need our captures to reference the string in the request path, not
     // the return values from Lua (which will be memory collected once we reset
     // the virtual stack). Though string.match doesn't tell us which match was
     // actually captured, it doesn't matter. We can just pick the first one.
-    for (int i = 0; i < results; ++i) {
+    for (int i = 0; i < result_count; ++i) {
       size_t len = 0;
       char const *capture = lua_tolstring(config->lua_, -1, &len);
       struct mn_view needle = mn_view_ref(capture, len);
-
-      // Pull the substring out of the request path for lifetime handling.
       struct mn_view substr = find_substr(req->path, needle);
       mn_assert(substr.len > 0);
-      req->captures[results - i - 1] = substr;
 
+      req->captures[result_count - i - 1] = substr;
       lua_pop(config->lua_, 1);
     }
 

@@ -279,13 +279,12 @@ static int lws_http_callback(
       }
 
       { // --- Query Params
-        int frag_index = 0;
         do {
           n = lws_hdr_copy_fragment(
               // Offset by 1 so we can insert a delimiter. Insert after this call
               // so we are notified if there is room left in our buffer first.
               wsi, req->buffer_ + count + 1, MN_REQUEST_MAX_PATH_LEN - count - 1,
-              WSI_TOKEN_HTTP_URI_ARGS, frag_index);
+              WSI_TOKEN_HTTP_URI_ARGS, req->query_count);
 
           if (n == -2) {
             // TODO: Return 414
@@ -294,14 +293,14 @@ static int lws_http_callback(
           }
 
           if (n > 0) {
-            if (frag_index + 1 >= MN_REQUEST_MAX_QUERY_PARAMS) {
+            if (req->query_count + 1 >= MN_REQUEST_MAX_QUERY_PARAMS) {
               // TODO: Return 414?
               mn_log_warn(
                   "Request URI too large: %d >= %d", n, MN_REQUEST_MAX_PATH_LEN);
               return LWS_CLOSE;
             }
 
-            req->buffer_[count] = frag_index == 0 ? '?' : '&';
+            req->buffer_[count] = req->query_count == 0 ? '?' : '&';
 
             // Find key/value separator.
             size_t offset = count + 1;
@@ -309,12 +308,12 @@ static int lws_http_callback(
               offset += 1;
             }
 
-            req->query[frag_index].fst =
+            req->query[req->query_count].fst =
                 mn_view_ref(req->buffer_ + count + 1, offset - count - 1);
-            req->query[frag_index].snd =
+            req->query[req->query_count].snd =
                 mn_view_ref(req->buffer_ + offset + 1, n - offset + 1);
 
-            frag_index += 1;
+            req->query_count += 1;
             count += n + 1;
           }
         } while (n >= 0);
