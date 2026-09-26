@@ -8,50 +8,34 @@
 // =================================================================================
 // Views
 
-/// A pointer to a portion of an existing NUL-terminated string.
-///
-/// Keep public to permit pass by value, but avoid accessing these fields directly.
 struct mn_view {
   char const *ss_;
   size_t len;
 };
 
-// Utilities for use in printf-like statements.
 #define PRInv "%.*s"
-#define mn_view_pri(nv) (int){(nv).len}, (nv).ss_
+#define mn_view_pri(X) (int){(X).len}, (X).ss_
 
-/// Create a mn_view pointing to ss.
-///
-/// @param ss - The string to reference. Must remain in memory as long as the view
-///             is being used.
-/// @param len - The length of the view. Pass 0 to indicate up to '\0' character.
 struct mn_view const mn_view_ref(char const ss[static 1], size_t const len);
 
-/// Create a new string view corresponding to the substring [i, j) of another.
 struct mn_view const
-mn_view_substr(struct mn_view const, size_t const i, size_t const j);
+mn_view_substr(struct mn_view const v, size_t const i, size_t const j);
 
-/// Check if two views are case-sensitive equal.
 bool mn_view_eq(struct mn_view const, struct mn_view const);
 
-/// Check if two views are case-insensitive equal.
 bool mn_view_ieq(struct mn_view const, struct mn_view const);
 
 // =================================================================================
 // Strings
 
-/// A wrapper around a NUL-terminated string.
-///
-/// Unlike the mn_view, this always corresponds to the entirety of a string. As
-/// such, it is safe to read the fields directly.
 struct mn_str {
   char const *ss;
   size_t len;
 };
 
-struct mn_str const mn_str_ref(char const ss[static 1], size_t const len);
-
 #define mn_str_lit(X) ((struct mn_str){.ss = ("" X ""), .len = MN_STR_LEN(X)})
+
+struct mn_str const mn_str_ref(char const ss[static 1], size_t const len);
 
 inline struct mn_view const mn_str_to_view(struct mn_str const s)
 {

@@ -34,6 +34,8 @@ Requests
 Responses
 ^^^^^^^^^
 
+.. _ref-concepts-event-loop:
+
 Event Loop
 ----------
 

@@ -72,70 +72,72 @@ define :c:macro:`MN_CMDLINE_SOURCE` before including **makinori**.
 API
 ---
 
-.. c:macro:: MN_CMDLINE_SOURCE
+.. container:: api
 
-   Must be defined before utilities are made available.
+   .. c:macro:: MN_CMDLINE_SOURCE
 
-.. c:enum:: mn_flag_arity
+      Must be defined before utilities are made available.
 
-   The arity of a command line flag.
+   .. c:enum:: mn_flag_arity
 
-   .. c:member:: unsigned int MN_FLAG_ARITY_ZERO = 0
-   .. c:member:: unsigned int MN_FLAG_ARITY_ONE = 1
-   .. c:member:: unsigned int MN_FLAG_ARITY_TWO = 2
-   .. c:member:: unsigned int MN_FLAG_ARITY_THREE = 3
-   .. c:member:: unsigned int MN_FLAG_ARITY_FOUR = 4
-   .. c:member:: unsigned int MN_FLAG_ARITY_FIVE = 5
-   .. c:member:: unsigned int MN_FLAG_ARITY_SIX = 6
-   .. c:member:: unsigned int MN_FLAG_ARITY_SEVEN = 7
+      The arity of a command line flag.
 
-.. c:struct:: mn_flag
+      .. c:member:: unsigned int MN_FLAG_ARITY_ZERO = 0
+      .. c:member:: unsigned int MN_FLAG_ARITY_ONE = 1
+      .. c:member:: unsigned int MN_FLAG_ARITY_TWO = 2
+      .. c:member:: unsigned int MN_FLAG_ARITY_THREE = 3
+      .. c:member:: unsigned int MN_FLAG_ARITY_FOUR = 4
+      .. c:member:: unsigned int MN_FLAG_ARITY_FIVE = 5
+      .. c:member:: unsigned int MN_FLAG_ARITY_SIX = 6
+      .. c:member:: unsigned int MN_FLAG_ARITY_SEVEN = 7
 
-   A representation of a command line flag. These should be supplied to
-   :c:var:`MN_FLAG_OPTIONS`.
+   .. c:struct:: mn_flag
 
-   .. c:member:: struct mn_str vals[MN_FLAG_ARITY_MAX]
+      A representation of a command line flag. These should be supplied to
+      :c:var:`MN_FLAG_OPTIONS`.
 
-      The values following the flag. After a call to :c:func:`mn_cmdline_parse`,
-      :c:expr:`vals[0]` will contain the first value, :c:expr:`vals[1]` contains
-      the second value, and so on.
+      .. c:member:: struct mn_str vals[MN_FLAG_ARITY_MAX]
 
-   .. c:member:: struct mn_str sflag
+         The values following the flag. After a call to :c:func:`mn_cmdline_parse`,
+         :c:expr:`vals[0]` will contain the first value, :c:expr:`vals[1]` contains
+         the second value, and so on.
 
-      The "short" flag, e.g. ``h``. An empty string means no short flag exists.
+      .. c:member:: struct mn_str sflag
 
-   .. c:member:: struct mn_str lflag
+         The "short" flag, e.g. ``h``. An empty string means no short flag exists.
 
-      The "long" flag, e.g. ``help``. An empty string means no long flag exists.
+      .. c:member:: struct mn_str lflag
 
-   .. c:member:: enum mn_flag_arity arity
+         The "long" flag, e.g. ``help``. An empty string means no long flag exists.
 
-      The number of arguments to expect. The argument count is exact; too few or
-      too many and the parser will complain.
+      .. c:member:: enum mn_flag_arity arity
 
-   .. c:member:: bool set
+         The number of arguments to expect. The argument count is exact; too few or
+         too many and the parser will complain.
 
-      Whether the flag was set. Mostly useful in the case of a flag with
-      :c:enum:`mn_flag_arity` zero.
+      .. c:member:: bool set
 
-.. c:var:: extern struct mn_flag *MN_FLAG_OPTIONS[]
+         Whether the flag was set. Mostly useful in the case of a flag with
+         :c:enum:`mn_flag_arity` zero.
 
-   Set by the user. A :c:expr:`nullptr`-terminated list of :c:struct:`mn_flag`
-   instances. If two flags have the same :c:member:`sflag` or :c:member:`lflag`,
-   the first in the list takes priority.
+   .. c:var:: extern struct mn_flag *MN_FLAG_OPTIONS[]
 
-   Call :c:func:`mn_cmdline_parse` only *after* this array has been set.
+      Set by the user. A :c:expr:`nullptr`-terminated list of :c:struct:`mn_flag`
+      instances. If two flags have the same :c:member:`sflag` or :c:member:`lflag`,
+      the first in the list takes priority.
 
-.. c:function:: struct mn_status mn_cmdline_parse( \
-                    int const argc, \
-                    char const *argv[const argc], \
-                    struct mn_str action[static 1])
+      Call :c:func:`mn_cmdline_parse` only *after* this array has been set.
 
-   Parses the command line.
+   .. c:function:: struct mn_status mn_cmdline_parse( \
+                       int const argc, \
+                       char const *argv[const argc], \
+                       struct mn_str action[static 1])
 
-   Call this function only *after* :c:var:`MN_FLAG_OPTIONS` is set.
+      Parses the command line.
 
-   :param argc: The ``argc`` as supplied to ``main``.
-   :param argv: The ``argv`` as supplied to ``main``.
-   :param action: A pointer to the :c:struct:`mn_str` to populate. Only updated
-                  if an action is supplied.
+      Call this function only *after* :c:var:`MN_FLAG_OPTIONS` is set.
+
+      :param argc: The ``argc`` as supplied to ``main``.
+      :param argv: The ``argv`` as supplied to ``main``.
+      :param action: A pointer to the :c:struct:`mn_str` to populate. Only updated
+                     if an action is supplied.

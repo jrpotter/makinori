@@ -8,67 +8,69 @@ means.
 API
 ---
 
-.. c:type:: struct lua_State mn_lua_t
+.. container:: api
 
-   An alias to the ``lua_State`` object provided by Lua.
+   .. c:type:: struct lua_State mn_lua_t
 
-.. c:enum:: mn_event_loop
+      An alias to the ``lua_State`` object provided by Lua.
 
-   The event loop to use. Currently the only supported value is
-   :c:member:`MN_EVENT_LOOP_POLL`.
+   .. c:enum:: mn_event_loop
 
-   .. c:member:: unsigned int MN_EVENT_LOOP_POLL = 0
+      The event loop to use. Currently the only supported value is
+      :c:member:`MN_EVENT_LOOP_POLL`.
 
-.. c:struct:: mn_config
+      .. c:member:: unsigned int MN_EVENT_LOOP_POLL = 0
 
-   Configuration options supplied to the :c:struct:`mn_server` on initialization.
+   .. c:struct:: mn_config
 
-   .. c:member:: unsigned long long coro_pages
+      Configuration options supplied to the :c:struct:`mn_server` on initialization.
 
-   The number of virtual memory pages allocated to each coroutine. In actuality,
-   one additional page is allocated as a guard to protect against stack
-   overflows.
+      .. c:member:: unsigned long long coro_pages
 
-   .. c:member:: enum mn_event_loop ev_loop
+      The number of virtual memory pages allocated to each coroutine. In actuality,
+      one additional page is allocated as a guard to protect against stack
+      overflows.
 
-   The underlying event loop library used by the :c:struct:`mn_server`.
+      .. c:member:: enum mn_event_loop ev_loop
 
-   .. c:member:: enum mn_log_level log_level
+      The underlying event loop library used by the :c:struct:`mn_server`.
 
-   The minimum log level that should be emitted when running.
+      .. c:member:: enum mn_log_level log_level
 
-   .. c:member:: unsigned long port
+      The minimum log level that should be emitted when running.
 
-   The port that the server will be listening on.
+      .. c:member:: unsigned long port
 
-.. c:function:: struct mn_status mn_config_load( \
-                    struct mn_config out[const static 1])
+      The port that the server will be listening on.
 
-   Loads the default configuration.
+   .. c:function:: struct mn_status mn_config_load( \
+                       struct mn_config out[const static 1])
 
-   If successful, the :c:expr:`out` parameter must be cleaned up using
-   :c:func:`mn_config_unload`.
+      Loads the default configuration.
 
-   :param out: The :c:struct:`mn_config` reference to load.
+      If successful, the :c:expr:`out` parameter must be cleaned up using
+      :c:func:`mn_config_unload`.
 
-.. c:function:: struct mn_status mn_config_load_with( \
-                    struct mn_str const path, \
-                    struct mn_config out[const static 1])
+      :param out: The :c:struct:`mn_config` reference to load.
 
-   Loads the default configuration and then applies any overridden configuration
-   options as defined in the file at :c:expr:`path`.
+   .. c:function:: struct mn_status mn_config_load_with( \
+                       struct mn_str const path, \
+                       struct mn_config out[const static 1])
 
-   If successful, the :c:expr:`out` parameter must be cleaned up using
-   :c:func:`mn_config_unload`.
+      Loads the default configuration and then applies any overridden configuration
+      options as defined in the file at :c:expr:`path`.
 
-   :param path: The location of a lua file to execute.
-   :param out: The :c:struct:`mn_config` reference to load.
+      If successful, the :c:expr:`out` parameter must be cleaned up using
+      :c:func:`mn_config_unload`.
 
-.. c:function:: struct mn_status mn_config_unload( \
-                    struct mn_config[const static 1])
+      :param path: The location of a lua file to execute.
+      :param out: The :c:struct:`mn_config` reference to load.
 
-   Unload the configuration object.
+   .. c:function:: struct mn_status mn_config_unload( \
+                       struct mn_config[const static 1])
 
-   Should be run once finished with a :c:struct:`mn_config` object
-   successfully loaded by a call to :c:func:`mn_config_load` or
-   :c:func:`mn_config_load_with`.
+      Unload the configuration object.
+
+      Should be run once finished with a :c:struct:`mn_config` object
+      successfully loaded by a call to :c:func:`mn_config_load` or
+      :c:func:`mn_config_load_with`.

@@ -6,41 +6,43 @@ The ``macro.h`` module contains a few generally applicable macros.
 API
 ---
 
-.. c:macro:: MN_ARR_SIZE(X)
+.. container:: api
 
-   Returns the number of elements in an array.
+   .. c:macro:: MN_ARR_SIZE(X)
 
-   .. code-block:: c
+      Returns the number of elements in an array.
 
-      int arr[] = {1, 2, 3};
-      static_assert(MN_ARR_SIZE(arr) == 3);
+      .. code-block:: c
 
-.. c:macro:: MN_PAIR(T1, T2)
+         int arr[] = {1, 2, 3};
+         static_assert(MN_ARR_SIZE(arr) == 3);
 
-   Produces an anonymous ``struct`` corresponding to a pair of types.
+   .. c:macro:: MN_PAIR(T1, T2)
 
-   .. code-block:: c
+      Produces an anonymous ``struct`` corresponding to a pair of types.
 
-      struct {
-        unsigned int fst;
-        void *snd;
-      } x;
+      .. code-block:: c
 
-      MN_PAIR(unsigned int, void *) y; // Same type as `x`
+         struct {
+           unsigned int fst;
+           void *snd;
+         } x;
 
-.. c:macro:: MN_STR_LEN(X)
+         MN_PAIR(unsigned int, void *) y; // Same type as `x`
 
-   Returns the number of characters in a statically allocated string.
+   .. c:macro:: MN_STR_LEN(X)
 
-   .. code-block:: c
+      Returns the number of characters in a statically allocated string.
 
-      char const* str = "abc";
-      static_assert(MN_STR_LEN(str) == 3);
+      .. code-block:: c
 
-.. c:macro:: MN_STR_TO(X)
+         char const* str = "abc";
+         static_assert(MN_STR_LEN(str) == 3);
 
-   Tokenizes the input argument, expanding arguments once before doing so.
+   .. c:macro:: MN_STR_TO(X)
 
-   .. code-block:: c
+      Tokenizes the input argument, expanding arguments once before doing so.
 
-      static_assert(MN_STR_TO(__LINE__)[0] == '1');
+      .. code-block:: c
+
+         static_assert(MN_STR_TO(__LINE__)[0] == '1');
