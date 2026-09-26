@@ -9,7 +9,7 @@ location of choice:
 
 .. code-block:: sh
 
-   $ git clone https://git.jrpotter.com/makinori <directory>
+   $ git clone https://git.jrpotter.com/jrpotter/makinori <directory>
 
 To build, you will need both `libwebsockets`_ (>= v4.5) and `lua`_ (>= v5.1).
 Install both libraries and adjust the *Configuration* section within the
