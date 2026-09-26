@@ -4,8 +4,8 @@
 import datetime
 
 project = 'makinori'
-copyright = f'{datetime.datetime.now(datetime.timezone.utc).year}, Joshua Potter'
-author = 'Joshua Potter'
+author = 'Joshua Potter, Brittany Colonna'
+copyright = f'{datetime.datetime.now(datetime.timezone.utc).year} {author}'
 release = '0.1.0'
 
 # =================================================================================

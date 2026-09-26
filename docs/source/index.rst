@@ -9,6 +9,10 @@ significantly smaller footprint.
 .. _Django: https://djangoproject.com
 .. _Ruby on Rails: https://rubyonrails.org
 
+.. container:: comic1
+
+   .. image:: /_static/comic1.png
+
 Documentation
 -------------
 
