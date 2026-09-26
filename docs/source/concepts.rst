@@ -143,15 +143,48 @@ cast them into different data types if necessary.
 Handlers
 --------
 
+As briefly described above, every :c:struct:`mn_route` has an associated
+:c:struct:`~mn_route.handler` triggered on match. A handler is intentionally
+very simply defined:
+
+.. code-block:: c
+
+   struct mn_status mn_route_handler_t( \
+       struct mn_request const, \
+       struct mn_response *const)
+
+That is to say, a **handler** is any function that takes in a :c:struct:`request
+<mn_request>` and a :c:struct:`response <mn_response>`. It also returns an
+:c:struct:`mn_status`. If the handler returns a failing status, the connection
+is immediately terminated.
+
 .. _ref-concepts-requests:
 
 Requests
 ^^^^^^^^
 
+Unsurprisingly, a :c:struct:`request <mn_request>` object contains
+details surrounding a client's request. A request of form e.g.
+``/page/1/2024-12?order=asc`` is decomposed into the following fields:
+
+* :c:member:`~mn_request.uri` contains the full path and query param string.
+   * ``/page/1/2024-12?order=asc``
+* :c:member:`~mn_request.path` contains just the path.
+   *  ``/page/1/2024-12``
+* :c:member:`~mn_request.query_count` contains the number of query params.
+   * ``1``
+* :c:member:`~mn_request.query` contains the parsed query params.
+   * ``{ .key = "order", .value = "asc" }``.
+
+Captures are also included in the request if relevant. These were covered
+:ref:`earlier <ref-concepts-captures>`.
+
 .. _ref-concepts-responses:
 
 Responses
 ^^^^^^^^^
+
+TODO
 
 .. _ref-concepts-event-loop:
 
