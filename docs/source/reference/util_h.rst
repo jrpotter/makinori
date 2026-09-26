@@ -50,7 +50,7 @@ API
      .. c:member:: enum mn_error error
 
         The error code associated with the status. Considered successful if and only
-        if :c:member:`error` is :c:member:`MN_ERROR_NONE`.
+        if :c:member:`~mn_status.error` is :c:member:`MN_ERROR_NONE`.
 
      .. c:member:: struct mn_str file
 
@@ -63,30 +63,30 @@ API
    .. c:macro:: MN_SUCCESS
 
       Utility for generating a :c:struct:`mn_status` instance with
-      :c:member:`error` :c:member:`MN_ERROR_NONE`.
+      :c:member:`~mn_status.error` :c:member:`MN_ERROR_NONE`.
 
    .. c:macro:: MN_FAILURE(err)
 
       Utility for generating a :c:struct:`mn_status` instance with
-      :c:member:`error` set to ``err``.
+      :c:member:`~mn_status.error` set to ``err``.
 
    .. c:macro:: MN_FAILURE_EMIT(err, lvl, msg, ...)
 
       Utility for :doc:`logging <logger_h>` a ``msg`` at log level
       ``lvl`` and then returning a :c:struct:`mn_status` instance with
-      :c:member:`error` set to ``err``.
+      :c:member:`~mn_status.error` set to ``err``.
 
    .. c:macro:: MN_WARN_EMIT(err, msg, ...)
 
       Utility for :doc:`logging <logger_h>` a ``msg`` at log level
       :c:member:`MN_LOG_LEVEL_WARN` and then returning a :c:struct:`mn_status`
-      instance with :c:member:`error` set to ``err``.
+      instance with :c:member:`~mn_status.error` set to ``err``.
 
    .. c:macro:: MN_ERROR_EMIT(err, msg, ...)
 
       Utility for :doc:`logging <logger_h>` a ``msg`` at log level
       :c:member:`MN_LOG_LEVEL_ERROR` and then returning a :c:struct:`mn_status`
-      instance with :c:member:`error` set to ``err``.
+      instance with :c:member:`~mn_status.error` set to ``err``.
 
    .. c:macro:: mn_assert(condition)
 

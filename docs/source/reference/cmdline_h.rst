@@ -122,9 +122,10 @@ API
 
    .. c:var:: extern struct mn_flag *MN_FLAG_OPTIONS[]
 
-      Set by the user. A :c:expr:`nullptr`-terminated list of :c:struct:`mn_flag`
-      instances. If two flags have the same :c:member:`sflag` or :c:member:`lflag`,
-      the first in the list takes priority.
+      Set by the user. A :c:expr:`nullptr`-terminated list of
+      :c:struct:`mn_flag` instances. If two flags have the same
+      :c:member:`~mn_flag.sflag` or :c:member:`~mn_flag.lflag`, the first in the
+      list takes priority.
 
       Call :c:func:`mn_cmdline_parse` only *after* this array has been set.
 

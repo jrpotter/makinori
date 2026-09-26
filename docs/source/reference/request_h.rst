@@ -53,8 +53,9 @@ API
 
    .. c:struct:: mn_query_param
 
-      A single query param. Given e.g. ``abc=def``, the :c:member:`key` corresponds
-      to ``abc`` whereas :c:member:`value` corresponds to ``def``.
+      A single query param. Given e.g. ``abc=def``, the
+      :c:member:`~mn_query_param.key` corresponds to ``abc`` whereas
+      :c:member:`~mn_query_param.value` corresponds to ``def``.
 
       .. c:member:: struct mn_view key
 
@@ -79,7 +80,7 @@ API
       .. c:member:: struct mn_query_param query[MN_REQUEST_MAX_QUERY_PARAMS]
 
          The query parameters sent by the client. There are a total of
-         :c:member:`query_count` valid key/value parameters set.
+         :c:member:`~mn_request.query_count` valid key/value parameters set.
 
       .. c:member:: size_t query_count
 
@@ -88,7 +89,7 @@ API
       .. c:member:: struct mn_view captures[MN_REQUEST_MAX_CAPTURES]
 
          The :ref:`captures <ref-concepts-captures>` pulled from the
-         :c:member:`path`.
+         :c:member:`~mn_request.path`.
 
       .. c:member:: size_t capture_count
 
@@ -116,21 +117,21 @@ API
          static struct mn_route route_root = {
              .method = MN_METHOD_GET,
              .pattern = mn_str_lit("/"),
-             .handler = serve_root,
+             .handler = handle_root,
              .next = &route_abc,
            };
 
          static struct mn_route route_abc = {
              .method = MN_METHOD_GET,
              .pattern = mn_str_lit("/abc"),
-             .handler = serve_abc,
+             .handler = handle_abc,
              .next = &route_def,
            };
 
          static struct mn_route route_def = {
              .method = MN_METHOD_GET,
              .pattern = mn_str_lit("/def"),
-             .handler = serve_def,
+             .handler = handle_def,
            };
 
       .. c:member:: enum mn_method method
