@@ -2,11 +2,9 @@
 
 #include "makinori/config.h"
 #include "makinori/request.h"
-#include "makinori/runtime.h"
 
 /// A representation of the server.
 struct mn_server {
-  mn_runtime_t *const runtime;
   struct mn_config config;
   struct mn_route route;
 };

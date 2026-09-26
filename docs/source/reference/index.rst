@@ -9,6 +9,10 @@ automatically pulled in using:
 
    #include "makinori.h"
 
+Fields ending in an underscore (e.g. ``lua_``) should not be accessed directly.
+If you come across a use case where it is necessary to do so, please file an
+issue.
+
 .. toctree::
    :maxdepth: 1
 
@@ -18,7 +22,6 @@ automatically pulled in using:
    macro_h
    request_h
    response_h
-   runtime_h
    server_h
    string_h
    util_h

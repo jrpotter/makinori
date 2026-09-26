@@ -13,7 +13,7 @@ release = '0.1.0'
 
 exclude_patterns = []
 extensions = []
-maximum_signature_line_length = 88
+maximum_signature_line_length = 80
 templates_path = ['_templates']
 
 def setup(app):

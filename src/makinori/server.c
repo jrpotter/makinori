@@ -323,7 +323,7 @@ static int lws_http_callback(
       // Find the route that corresponds to our request. Also sets captures if
       // the route's pattern includes them.
       struct mn_route const *const route =
-          mn_route_match(server->runtime, &server->route, req);
+          mn_route_match(&server->config, &server->route, req);
 
       if (route == nullptr) {
         // TODO: Return 404

@@ -1,6 +1,8 @@
-#ifdef MN_CMDLINE_SOURCE
-
 #include <string.h>
+
+#ifndef MN_CMDLINE_SOURCE
+#define MN_CMDLINE_SOURCE
+#endif
 
 #include "makinori/cmdline.h"
 #include "makinori/util.h"
@@ -50,5 +52,3 @@ struct mn_status mn_cmdline_parse(
 
   return MN_SUCCESS;
 }
-
-#endif /* MN_CMDLINE_SOURCE */

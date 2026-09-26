@@ -44,14 +44,11 @@ response with body ``Hello, world``.
 
    int main(void)
    {
-     mn_runtime_t *runtime = mn_runtime_create();
-
      struct mn_config config = {};
      mn_config_load(runtime, &config);
 
-     struct mn_server server = {
-         .runtime = runtime, .config = config, .route = route_index};
+     struct mn_server server = {.config = config, .route = route_index};
      mn_server_run(&server);
 
-     mn_runtime_destroy(runtime);
+     mn_config_unload(&config);
    }

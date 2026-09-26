@@ -1,4 +1,6 @@
 server.h
 ========
 
-TODO
+.. c:struct:: mn_server
+
+   TODO

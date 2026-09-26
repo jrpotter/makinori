@@ -42,7 +42,7 @@ find_substr(struct mn_view const path, struct mn_view const needle)
 }
 
 struct mn_route const *const mn_route_match(
-    mn_runtime_t *const runtime,
+    struct mn_config const config[const static 1],
     struct mn_route const route[const static 1],
     struct mn_request req[static 1])
 {
@@ -51,7 +51,7 @@ struct mn_route const *const mn_route_match(
     return nullptr;
   }
 
-  lua_getglobal(runtime, "nori");
+  lua_getglobal(config->lua_, "nori");
 
   struct mn_route const *match = nullptr;
 
@@ -61,25 +61,25 @@ struct mn_route const *const mn_route_match(
       continue;
     }
 
-    lua_getfield(runtime, -1, "anchor_string_match");
+    lua_getfield(config->lua_, -1, "anchor_string_match");
     // Use of ss_ is safe here since we also pass the length.
-    lua_pushlstring(runtime, req->path.ss_, req->path.len);
-    lua_pushlstring(runtime, curr->pattern.ss, curr->pattern.len);
+    lua_pushlstring(config->lua_, req->path.ss_, req->path.len);
+    lua_pushlstring(config->lua_, curr->pattern.ss, curr->pattern.len);
 
-    if (lua_pcall(runtime, 2, LUA_MULTRET, 0)) {
-      mn_log_warn("nori.anchor_string_match: %s", lua_tostring(runtime, -1));
-      lua_pop(runtime, 1);
+    if (lua_pcall(config->lua_, 2, LUA_MULTRET, 0)) {
+      mn_log_warn("nori.anchor_string_match: %s", lua_tostring(config->lua_, -1));
+      lua_pop(config->lua_, 1);
       break;
     }
 
     // Matcher returned nil meaning the path did not match the pattern.
-    if (lua_type(runtime, -1) == LUA_TNIL) {
-      lua_pop(runtime, 1);
+    if (lua_type(config->lua_, -1) == LUA_TNIL) {
+      lua_pop(config->lua_, 1);
       continue;
     }
 
     int sentinel = -1;
-    while (lua_type(runtime, sentinel) == LUA_TSTRING) {
+    while (lua_type(config->lua_, sentinel) == LUA_TSTRING) {
       sentinel -= 1;
     }
     int results = -sentinel - 1;
@@ -91,7 +91,7 @@ struct mn_route const *const mn_route_match(
     // actually captured, it doesn't matter. We can just pick the first one.
     for (int i = 0; i < results; ++i) {
       size_t len = 0;
-      char const *capture = lua_tolstring(runtime, -1, &len);
+      char const *capture = lua_tolstring(config->lua_, -1, &len);
       struct mn_view needle = mn_view_ref(capture, len);
 
       // Pull the substring out of the request path for lifetime handling.
@@ -99,13 +99,13 @@ struct mn_route const *const mn_route_match(
       mn_assert(substr.len > 0);
       req->captures[results - i - 1] = substr;
 
-      lua_pop(runtime, 1);
+      lua_pop(config->lua_, 1);
     }
 
     match = curr;
     break;
   }
 
-  lua_pop(runtime, 1); // nori global
+  lua_pop(config->lua_, 1); // nori global
   return match;
 }

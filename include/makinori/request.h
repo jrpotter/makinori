@@ -1,7 +1,7 @@
 #pragma once
 
+#include "makinori/config.h"
 #include "makinori/response.h"
-#include "makinori/runtime.h"
 #include "makinori/string.h"
 
 #ifndef MN_REQUEST_MAX_PATH_LEN
@@ -74,6 +74,6 @@ struct mn_route {
 };
 
 struct mn_route const *const mn_route_match(
-    mn_runtime_t *const runtime,
+    struct mn_config const config[const static 1],
     struct mn_route const route[const static 1],
     struct mn_request req[static 1]);

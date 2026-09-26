@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define MN_CMDLINE_SOURCE
 #include "makinori.h"
 
 // =================================================================================
@@ -59,11 +60,8 @@ int main(int argc, char const *argv[argc])
     return EXIT_SUCCESS;
   }
 
-  mn_runtime_t *runtime = mn_runtime_create();
-  mn_assert(runtime);
-
   struct mn_config config = {};
-  status = mn_config_load_with(FLAG_CONFIG.vals[0], runtime, &config);
+  status = mn_config_load_with(FLAG_CONFIG.vals[0], &config);
   if (status.error) {
     goto done;
   }
@@ -73,14 +71,13 @@ int main(int argc, char const *argv[argc])
   mn_log_set_level(config.log_level);
 
   if (mn_str_eq(action, mn_str_lit("run"))) {
-    struct mn_server server = {
-        .runtime = runtime, .config = config, .route = route_root};
+    struct mn_server server = {.config = config, .route = route_root};
     status = mn_server_run(&server);
   } else {
     status = MN_ERROR_EMIT(MN_ERROR_INVALID_ARG, "Unknown action %s", action.ss);
   }
 
 done:
-  mn_runtime_destroy(runtime);
+  mn_config_unload(&config);
   return status.error ? EXIT_FAILURE : EXIT_SUCCESS;
 }
