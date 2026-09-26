@@ -16,6 +16,6 @@ Documentation
    :maxdepth: 2
 
    intro
-   concepts/index
+   concepts
    config
    reference/index

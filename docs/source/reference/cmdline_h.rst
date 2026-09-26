@@ -97,8 +97,8 @@ API
    .. c:member:: struct mn_str vals[MN_FLAG_ARITY_MAX]
 
       The values following the flag. After a call to :c:func:`mn_cmdline_parse`,
-      ``vals[0]`` will contain the first value, ``vals[1]`` contains the second
-      value, and so on.
+      :c:expr:`vals[0]` will contain the first value, :c:expr:`vals[1]` contains
+      the second value, and so on.
 
    .. c:member:: struct mn_str sflag
 
@@ -120,7 +120,7 @@ API
 
 .. c:var:: extern struct mn_flag *MN_FLAG_OPTIONS[]
 
-   Set by the user. A ``nullptr``-terminated list of :c:struct:`mn_flag`
+   Set by the user. A :c:expr:`nullptr`-terminated list of :c:struct:`mn_flag`
    instances. If two flags have the same :c:member:`sflag` or :c:member:`lflag`,
    the first in the list takes priority.
 
