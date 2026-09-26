@@ -2,11 +2,15 @@
 
 #include "makinori/macro.h"
 
-// Toggle on for debugging
+#ifndef MN_TRACE_LWS_CALLBACK
 #define MN_TRACE_LWS_CALLBACK false
-#define MN_TRACE_RESPONSE_STATE false
+#endif
 
-enum mn_log_level {
+#ifndef MN_TRACE_RESPONSE_STATE
+#define MN_TRACE_RESPONSE_STATE false
+#endif
+
+enum mn_log_level : unsigned int {
   MN_LOG_LEVEL_DEBUG = 0,
   MN_LOG_LEVEL_INFO = 1,
   MN_LOG_LEVEL_NOTICE = 2,
@@ -15,7 +19,7 @@ enum mn_log_level {
 };
 
 /// Set the per-thread log level. Lower level logs are not output.
-void mn_log_set_level(const enum mn_log_level);
+void mn_log_set_level(enum mn_log_level const);
 
 /// Emit a log at the specified level.
 [[gnu::__format__(__printf__, 2, 3)]]
@@ -39,21 +43,6 @@ void mn_log_(enum mn_log_level const level, char const *const msg, ...);
 #define mn_log_error(msg, ...)                                                         \
   mn_log(MN_LOG_LEVEL_ERROR, msg __VA_OPT__(, ) __VA_ARGS__)
 
-/// Emits a log message.
-///
-/// Unlike the level-specific logging functions, this ignores the current log level.
-/// Instead, application code is expected to introduce defines to toggle the log.
-/// For example:
-///
-/// ```c
-/// #define TRACE_REQUEST true
-/// ...
-/// mn_trace(TRACE_REQUEST, "Received request w/id %d", id);
-/// ```
-///
-/// Traces are not output if NDEBUG is true.
-///
-/// @param tag - Whether the trace should be enabled or not.
 [[gnu::__format__(__printf__, 2, 3)]]
 void mn_trace_(bool tag, char const *const msg, ...);
 
