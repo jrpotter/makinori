@@ -101,7 +101,7 @@ API
 
 .. c:struct:: mn_route
 
-   A route. These are pattern-matched against user requests. For more
+   A route. These are pattern-matched against client requests. For more
    information, refer to :ref:`ref-concepts-routing`. The following is a typical
    example of how a router might be defined:
 

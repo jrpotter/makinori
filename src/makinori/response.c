@@ -115,68 +115,6 @@ struct mn_status mn_response_write(struct mn_response *const res, struct mn_str 
   return mn_response_write_buffer(res, output.ss, output.len);
 }
 
-struct mn_status mn_response_write_buffer(
-    struct mn_response *const res,
-    char const buffer[const static 1],
-    size_t const len)
-{
-  struct mn_status status = MN_SUCCESS;
-
-  // The first time we write in a given request, we transition our state machine.
-  // The user can no longer write headers.
-  if (res->state == MN_RESPONSE_STATE_HEADER) {
-    mn_trace(MN_TRACE_RESPONSE_STATE, "(%p) HEADER -> HEADER_FLUSH", (void *){res});
-    res->state = MN_RESPONSE_STATE_HEADER_FLUSH;
-    status = mn_response_suspend(res);
-    if (status.error) {
-      mn_log_error("Could not suspend coroutine");
-      return status;
-    }
-    mn_assert(res->state == MN_RESPONSE_STATE_BODY);
-  }
-
-  if (res->state != MN_RESPONSE_STATE_BODY) {
-    return MN_FAILURE(MN_ERROR_IMMUTABLE);
-  }
-
-  size_t count = 0;
-  while (count < len) {
-    // Write as much as we can in one go. The main context is responsible for
-    // buffering content appropriately.
-    ssize_t n = write(res->fd_write, buffer + count, len - count);
-
-    if (n == -1) {
-      // Needing to pause at this point should rarely happen. Relinquish control
-      // back to the main context and have it resume this for another try later.
-      if (errno == EAGAIN || errno == EWOULDBLOCK) {
-        mn_log_warn("write blocked");
-        status = mn_response_suspend(res);
-        if (status.error) {
-          mn_log_error("Could not suspend coroutine");
-          return status;
-        }
-        continue;
-      }
-
-      mn_perror("write");
-      return MN_FAILURE(MN_ERROR_SYSTEM);
-    }
-
-    // Let the main context read in what we just wrote out.
-    if (n > 0) {
-      status = mn_response_suspend(res);
-      if (status.error) {
-        mn_log_error("Could not suspend coroutine");
-        return status;
-      }
-    }
-
-    count += n;
-  }
-
-  return MN_SUCCESS;
-}
-
 struct mn_status
 mn_response_write_file(struct mn_response *const res, struct mn_str path)
 {
@@ -237,4 +175,66 @@ cleanup:
     mn_perror("close");
   }
   return status;
+}
+
+struct mn_status mn_response_write_buffer(
+    struct mn_response *const res,
+    char const buffer[const static 1],
+    size_t const len)
+{
+  struct mn_status status = MN_SUCCESS;
+
+  // The first time we write in a given request, we transition our state machine.
+  // The user can no longer write headers.
+  if (res->state == MN_RESPONSE_STATE_HEADER) {
+    mn_trace(MN_TRACE_RESPONSE_STATE, "(%p) HEADER -> HEADER_FLUSH", (void *){res});
+    res->state = MN_RESPONSE_STATE_HEADER_FLUSH;
+    status = mn_response_suspend(res);
+    if (status.error) {
+      mn_log_error("Could not suspend coroutine");
+      return status;
+    }
+    mn_assert(res->state == MN_RESPONSE_STATE_BODY);
+  }
+
+  if (res->state != MN_RESPONSE_STATE_BODY) {
+    return MN_FAILURE(MN_ERROR_IMMUTABLE);
+  }
+
+  size_t count = 0;
+  while (count < len) {
+    // Write as much as we can in one go. The main context is responsible for
+    // buffering content appropriately.
+    ssize_t n = write(res->fd_write, buffer + count, len - count);
+
+    if (n == -1) {
+      // Needing to pause at this point should rarely happen. Relinquish control
+      // back to the main context and have it resume this for another try later.
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        mn_log_warn("write blocked");
+        status = mn_response_suspend(res);
+        if (status.error) {
+          mn_log_error("Could not suspend coroutine");
+          return status;
+        }
+        continue;
+      }
+
+      mn_perror("write");
+      return MN_FAILURE(MN_ERROR_SYSTEM);
+    }
+
+    // Let the main context read in what we just wrote out.
+    if (n > 0) {
+      status = mn_response_suspend(res);
+      if (status.error) {
+        mn_log_error("Could not suspend coroutine");
+        return status;
+      }
+    }
+
+    count += n;
+  }
+
+  return MN_SUCCESS;
 }
