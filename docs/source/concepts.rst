@@ -4,17 +4,27 @@ Concepts
 Though **makinori** is intended to feel familiar to even first time users, there
 remain certain concepts that are less common and worth expanding on.
 
+.. _ref-concepts-routing:
+
 Routing
 -------
+
+.. _ref-concepts-patterns:
 
 Patterns
 ^^^^^^^^
 
+.. _ref-concepts-captures:
+
 Captures
 ^^^^^^^^
 
+.. _ref-concepts-handlers:
+
 Handlers
 --------
+
+.. _ref-concepts-requests:
 
 Requests
 ^^^^^^^^

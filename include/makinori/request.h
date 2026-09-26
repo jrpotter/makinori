@@ -1,6 +1,5 @@
 #pragma once
 
-#include "makinori/config.h"
 #include "makinori/response.h"
 #include "makinori/string.h"
 
@@ -11,19 +10,24 @@
 static_assert(MN_REQUEST_MAX_PATH_LEN >= 256);
 
 #ifndef MN_REQUEST_MAX_CAPTURES
-#define MN_REQUEST_MAX_CAPTURES 16
+#define MN_REQUEST_MAX_CAPTURES 24
 #endif
 
 static_assert(MN_REQUEST_MAX_CAPTURES >= 0);
 
 #ifndef MN_REQUEST_MAX_QUERY_PARAMS
-#define MN_REQUEST_MAX_QUERY_PARAMS 16
+#define MN_REQUEST_MAX_QUERY_PARAMS 32
 #endif
 
 static_assert(MN_REQUEST_MAX_QUERY_PARAMS >= 0);
 
-enum mn_method {
-  MN_METHOD_GET,
+enum mn_method : unsigned int {
+  MN_METHOD_GET = 0,
+};
+
+struct mn_query_param {
+  struct mn_view key;
+  struct mn_view value;
 };
 
 struct mn_request {
@@ -31,7 +35,7 @@ struct mn_request {
   struct mn_str uri;
   struct mn_view path;
 
-  MN_PAIR(struct mn_view, struct mn_view) query[MN_REQUEST_MAX_QUERY_PARAMS];
+  struct mn_query_param query[MN_REQUEST_MAX_QUERY_PARAMS];
   size_t query_count;
 
   struct mn_view captures[MN_REQUEST_MAX_CAPTURES];
@@ -49,8 +53,3 @@ struct mn_route {
   mn_route_handler_t *handler;
   struct mn_route *next;
 };
-
-struct mn_route const *const mn_route_match(
-    struct mn_config const config[const static 1],
-    struct mn_route const route[const static 1],
-    struct mn_request req[static 1]);
