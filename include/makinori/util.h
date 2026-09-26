@@ -1,28 +1,27 @@
 #pragma once
 
 #ifndef NDEBUG
-#include <stdlib.h> // IWYU pragma: keep, needed for exit call
+#include <stdlib.h> // IWYU pragma: keep, needed for abort
 #endif
 
 #include "makinori/logger.h"
 #include "makinori/macro.h"
 #include "makinori/string.h"
 
-enum mn_error {
+enum mn_error : unsigned int {
   MN_ERROR_NONE = 0,
 
-  // User facing errors. These happen because of user error.
+  // User facing errors
   MN_ERROR_CONFIG = 1,
-  MN_ERROR_INVALID_ARG,
-  MN_ERROR_IMMUTABLE,
-  MN_ERROR_DUPLICATE,
+  MN_ERROR_INVALID_ARG = 2,
+  MN_ERROR_IMMUTABLE = 3,
+  MN_ERROR_DUPLICATE = 4,
 
-  // System errors. These happen because of an internal error.
+  // System errors
   MN_ERROR_SYSTEM = 900,
-  MN_ERROR_NOMEM,
+  MN_ERROR_NOMEM = 901,
 };
 
-/// A representation of a success or failure.
 struct mn_status {
   enum mn_error error;
   struct mn_str file;
@@ -56,13 +55,13 @@ struct mn_status {
   MN_FAILURE_EMIT(err, MN_LOG_LEVEL_ERROR, msg __VA_OPT__(, ) __VA_ARGS__)
 
 #ifdef NDEBUG
-#define mn_assert(condition, ...)
+#define mn_assert(condition)
 #else
-#define mn_assert(condition, ...)                                                      \
+#define mn_assert(condition)                                                           \
   ({                                                                                   \
     if (!(condition)) {                                                                \
       mn_log_error(#condition " assertion failed");                                    \
-      exit(1);                                                                         \
+      abort();                                                                         \
     }                                                                                  \
   })
 #endif
