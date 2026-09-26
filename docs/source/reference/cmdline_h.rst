@@ -18,12 +18,14 @@ As an example, the following command has action ``run`` and flags ``--port`` and
 
 By defining instances of :c:struct:`mn_flag` and setting the
 :c:var:`MN_FLAG_OPTIONS` variable, you can automatically parse command lines
-like the one above. Here is a full example to demonstrate usage:
+like the one above. Here is a full example to demonstrate usage. Notice you must
+define :c:macro:`MN_CMDLINE_SOURCE` before including **makinori**.
 
 .. code-block:: c
 
-   #include <stdio.h>
    #include <stdlib.h>
+
+   #define MN_CMDLINE_SOURCE
    #include "makinori.h"
 
    static struct mn_flag FLAG_HELP = {
@@ -44,30 +46,35 @@ like the one above. Here is a full example to demonstrate usage:
        nullptr,
    };
 
-   int main(int argc, char const *argv[argc]) {
+   int main(int argc, char const *argv[argc])
+   {
      struct mn_str action = {};
-	 auto status = mn_cmdline_parse(argc, argv, &action);
-	 if (status.error) {
-	   return EXIT_FAILURE;
-	 }
+     auto status = mn_cmdline_parse(argc, argv, &action);
+     if (status.error) {
+       return EXIT_FAILURE;
+     }
 
-	 if (FLAG_HELP.set) {
-	   // printf help documentation
-	   return EXIT_SUCCESS;
-	 }
+     if (FLAG_HELP.set) {
+       // printf help documentation
+       return EXIT_SUCCESS;
+     }
 
-	 if (mn_str_eq(action, mn_str_lit("run"))) {
-	   // run server
-	 } else {
-	   // printf unknown action
-	   return EXIT_FAILURE;
-	 }
+     if (mn_str_eq(action, mn_str_lit("run"))) {
+       // run server
+     } else {
+       // printf unknown action
+       return EXIT_FAILURE;
+     }
 
      return EXIT_FAILURE;
    }
 
 API
 ---
+
+.. c:macro:: MN_CMDLINE_SOURCE
+
+   Must be defined before utilities are made available.
 
 .. c:enum:: mn_flag_arity
 

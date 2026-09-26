@@ -1,3 +1,5 @@
+#ifdef MN_CMDLINE_SOURCE
+
 #pragma once
 
 #include "makinori/util.h"
@@ -28,3 +30,5 @@ struct mn_status mn_cmdline_parse(
     int const argc,
     char const *argv[const argc],
     struct mn_str action[static 1]);
+
+#endif /* MN_CMDLINE_SOURCE */

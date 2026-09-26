@@ -4,7 +4,7 @@ Reference
 TODO
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    cmdline_h
    config_h
