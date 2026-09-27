@@ -2,6 +2,16 @@
   padding-bottom: 12pt;
 }
 
+.container.api .field-list.simple dd:not(:first-of-type),
+.container.api .field-list.simple dt:not(:first-of-type) {
+  margin-top: 6pt;
+}
+
+.container.api .field-list.simple .line-block {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
 .container.comic1 {
   padding-top: 12pt;
 }

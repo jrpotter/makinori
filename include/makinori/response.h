@@ -13,15 +13,17 @@ struct mn_status
 mn_response_set_code(struct mn_response *const, enum mn_http_code code);
 
 struct mn_status mn_response_set_header(
-    struct mn_response *const,
+    struct mn_response *const res,
     struct mn_str header,
     struct mn_str value);
 
-struct mn_status mn_response_write(struct mn_response *const, struct mn_str output);
+struct mn_status
+mn_response_write(struct mn_response *const res, struct mn_str const content);
 
-struct mn_status mn_response_write_file(struct mn_response *const, struct mn_str path);
+struct mn_status
+mn_response_write_file(struct mn_response *const res, struct mn_str const path);
 
 struct mn_status mn_response_write_buffer(
-    struct mn_response *const,
+    struct mn_response *const res,
     char const buffer[const static 1],
     size_t const len);

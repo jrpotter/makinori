@@ -138,7 +138,13 @@ API
 
       Call this function only *after* :c:var:`MN_FLAG_OPTIONS` is set.
 
-      :param argc: The ``argc`` as supplied to ``main``.
-      :param argv: The ``argv`` as supplied to ``main``.
-      :param action: A pointer to the :c:struct:`mn_str` to populate. Only updated
-                     if an action is supplied.
+      :arg argc: The ``argc`` as supplied to ``main``.
+
+      :arg argv: The ``argv`` as supplied to ``main``.
+
+      :arg action: A pointer to the :c:struct:`mn_str` to populate. Only updated
+                   if an action is supplied.
+
+      :return: | An :c:struct:`mn_status` with value:
+               | - :c:member:`MN_ERROR_NONE` on success;
+               | - :c:member:`MN_ERROR_CONFIG` on failure.

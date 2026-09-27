@@ -9,9 +9,9 @@ remain certain concepts that are less common and worth expanding on.
 Routing
 -------
 
-A client :c:struct:`request <mn_request>` is compared against a number
-of user-defined :c:struct:`routes <mn_route>`. These specify an HTTP
-:c:enum:`method <mn_method>` and :c:member:`~mn_route.pattern` to compare the
+A client :c:struct:`request <mn_request>` is compared against a number of
+user-defined :c:struct:`routes <mn_route>`. These specify a :c:enum:`method
+<mn_method>` field and :c:member:`~mn_route.pattern` field to compare the
 request path against. Routes are arranged as a linked list and traversed in
 order until a **match** is found. Consider the following snippet:
 
@@ -42,18 +42,18 @@ order until a **match** is found. Consider the following snippet:
    mn_server_run(&server);
 
 In this example, the :c:struct:`server <mn_server>` starts running and waits
-on the configured port for a client request. Once received, the HTTP method
-and path declared in the request is compared against the ``method`` and
-``pattern`` specified in ``route_first``. If there is a match, the user-defined
-``handle_first`` method is invoked . Otherwise ``next`` is traversed and the
-process repeats. If no match is found, **makinori** automatically returns an
-HTTP 404 Not Found.
+on the configured port for a client request. Once received, the HTTP method and
+path declared in the request is compared against the ``method`` and ``pattern``
+specified in ``route_first``. If both equal, the user-defined ``handle_first``
+method is invoked . Otherwise ``next`` is traversed and the process repeats. If
+no match is found, **makinori** automatically returns an HTTP 404 Not Found.
 
 .. tip::
 
    The forward declarations made at the top of the snippet introduce a small
-   readability improvement, letting us declare routes in the order they would be
-   traversed. Otherwise they must be listed in reverse order.
+   readability improvement, letting us define :c:struct:`mn_route` instances in
+   the order they would be traversed. Otherwise they must be listed in reverse
+   order.
 
 Many other frameworks introduce a means of defining routes hierarchically whereas
 **makinori** shys away from this for a few reasons:
@@ -72,27 +72,26 @@ Many other frameworks introduce a means of defining routes hierarchically wherea
 Patterns
 ^^^^^^^^
 
-In the snippet above, paths had to equal a route's :c:member:`~mn_route.pattern`
-field exactly to constitute a match. By using patterns, we can generalize what
-dictates a match. For example:
+In the snippet above, paths of incoming requests have to equal a route's
+:c:member:`~mn_route.pattern` field exactly to constitute a match. By leveraging
+**patterns**, we can generalize what dictates a match. For example:
 
 * ``%d`` matches any digit;
 * ``[abc]*`` matches any string consisting of letters ``a``, ``b``, and ``c``;
 * ``....?`` matches any sequence of three or four characters.
 
 In fact, Lua's `pattern matching`_ mechanism is used directly, so any pattern
-supported by Lua is suitable for use. Keep in mind though, the version of Lua
-used during compilation may dictate what patterns are available to you. Also
-note that the ``/`` character found in URIs has no special status. This means a
+supported by Lua is suitable for use. Keep in mind, the version of Lua used
+during compilation may dictate what patterns are available to you. Also note
+that the ``/`` character found in URIs has no special status. This means a
 pattern like ``/.*`` will match every route.
 
 .. _pattern matching: https://www.lua.org/manual/5.1/manual.html#5.4.1
 
 .. note::
 
-   For those familiar with Lua patterns, note that **makinori** automatically
-   introduces anchors ``^`` and ``$`` to the start and end of each pattern
-   respectively.
+   **makinori** automatically introduces leading anchor ``^`` and trailing
+   anchor ``$`` to a pattern if it does not include them.
 
 .. tip::
 
@@ -117,7 +116,7 @@ against path ``/page/14/2024-12``:
        .handler = handle_page};
 
 Each parenthesized group denotes a capture of which this particular
-pattern defines three. The ``handle_page`` handler will be given a
+pattern defines three. The ``handle_page`` handler will be given an
 :c:struct:`mn_request`,  say ``req``, satisfying :c:expr:`req.capture_count ==
 3` and
 
@@ -184,7 +183,26 @@ Captures are also included in the request if relevant. These were covered
 Responses
 ^^^^^^^^^
 
-TODO
+**makinori** defaults to streaming HTTP responses to the client when
+possible. When writing to a :c:struct:`mn_response` object using methods like
+:c:func:`mn_response_set_code` or :c:func:`mn_response_write`, you are also
+writing a response directly to the client (outside of a small buffer period).
+This feature happens transparently depending on which protocol the client
+requested:
+
+* HTTP/1.0. The connection is terminated once the response is finished streaming
+  to indicate the end of the content.
+* HTTP/1.1. Header ``Transfer-Encoding: chunked`` is automatically included
+  in the response and a special terminating chunk is automatically issued when
+  finished.
+* HTTP/2. Native ``DATA`` frames are issued. An ``END_STREAM`` flag is
+  automatically sent in the final frame.
+
+As a consequence, you *must* finish writing the HTTP headers to the response
+before you begin writing the body. Since we default to streaming, it is not
+necessary to provide a ``Content-Length`` flag in your responses. You can if you
+need to, but the value will need to be calculated and set *before* invoking any
+method that writes to the body.
 
 .. _ref-concepts-event-loop:
 

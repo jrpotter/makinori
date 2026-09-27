@@ -41,22 +41,22 @@ struct mn_status mn_response_resume(struct mn_response *const res)
 // API
 
 struct mn_status
-mn_response_set_code(struct mn_response *const r, enum mn_http_code code)
+mn_response_set_code(struct mn_response *const res, enum mn_http_code code)
 {
   if (code < MN_HTTP_CODE_OK) {
     return MN_FAILURE(MN_ERROR_INVALID_ARG);
   }
 
-  if (r->state != MN_RESPONSE_STATE_HEADER) {
+  if (res->state != MN_RESPONSE_STATE_HEADER) {
     return MN_FAILURE(MN_ERROR_IMMUTABLE);
   }
 
   // Cannot set the HTTP status code more than once.
-  if (r->common_code) {
+  if (res->common_code) {
     return MN_FAILURE(MN_ERROR_DUPLICATE);
   }
 
-  r->common_code = code;
+  res->common_code = code;
   return MN_SUCCESS;
 }
 
@@ -110,13 +110,14 @@ struct mn_status mn_response_set_header(
   return MN_SUCCESS;
 }
 
-struct mn_status mn_response_write(struct mn_response *const res, struct mn_str output)
+struct mn_status
+mn_response_write(struct mn_response *const res, struct mn_str const content)
 {
-  return mn_response_write_buffer(res, output.ss, output.len);
+  return mn_response_write_buffer(res, content.ss, content.len);
 }
 
 struct mn_status
-mn_response_write_file(struct mn_response *const res, struct mn_str path)
+mn_response_write_file(struct mn_response *const res, struct mn_str const path)
 {
   if (path.len == 0) {
     return MN_FAILURE(MN_ERROR_INVALID_ARG);

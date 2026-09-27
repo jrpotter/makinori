@@ -50,10 +50,10 @@ Views
 
       Create a new :c:struct:`mn_view` pointing to ``ss`` with length ``len``.
 
-      :param ss: The C-string to point to. Must remain valid during the lifetime of
-                 the :c:struct:`mn_view` instance.
-      :param len: The length of the portion of the string the :c:struct:`mn_view`
-                  references.
+      :arg ss: The C-string to point to. Must remain valid during the lifetime of
+               the :c:struct:`mn_view` instance.
+      :arg len: The length of the portion of the string the :c:struct:`mn_view`
+                references.
 
    .. c:function:: struct mn_view const mn_view_substr( \
                        struct mn_view const v, \
@@ -62,9 +62,9 @@ Views
 
       Create a subview of another.
 
-      :param v: The :c:struct:`mn_view` to take a subview of.
-      :param i: The starting index of the subview, inclusive.
-      :param j: The ending index of the subview, exclusive.
+      :arg v: The :c:struct:`mn_view` to take a subview of.
+      :arg i: The starting index of the subview, inclusive.
+      :arg j: The ending index of the subview, exclusive.
 
    .. c:function:: bool mn_view_eq(struct mn_view const, struct mn_view const)
 
@@ -113,9 +113,9 @@ Strings
       is assumed ``ss`` does not contain embedded ``NUL`` characters and is
       ``NUL``-terminated with :c:expr:`ss[len] == '\\0'`.
 
-      :param ss: The C-string to point to. Must remain valid during the lifetime of
-                 the :c:struct:`mn_str` instance.
-      :param len: The length of ``ss`` excluding the trailing ``NUL`` character.
+      :arg ss: The C-string to point to. Must remain valid during the lifetime of
+               the :c:struct:`mn_str` instance.
+      :arg len: The length of ``ss`` excluding the trailing ``NUL`` character.
 
    .. c:function:: struct mn_view const mn_str_to_view(struct mn_str const s)
 
@@ -128,9 +128,9 @@ Strings
 
       Create a view from a string.
 
-      :param s: The :c:struct:`mn_str` to take a view of.
-      :param i: The starting index of the view, inclusive.
-      :param j: The ending index of the view, exclusive.
+      :arg s: The :c:struct:`mn_str` to take a view of.
+      :arg i: The starting index of the view, inclusive.
+      :arg j: The ending index of the view, exclusive.
 
    .. c:function:: bool mn_str_eq(struct mn_str const, struct mn_str const)
 

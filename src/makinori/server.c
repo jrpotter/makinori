@@ -714,7 +714,7 @@ static int lws_http_callback(
 // =================================================================================
 // Entrypoint
 
-struct mn_status mn_server_run(struct mn_server server[static 1])
+struct mn_status mn_server_run(struct mn_server s[static 1])
 {
   struct sigaction const act = {.sa_handler = server_signal_handler};
   if (sigaction(SIGINT, &act, nullptr) == -1) {
@@ -726,7 +726,7 @@ struct mn_status mn_server_run(struct mn_server server[static 1])
       .name = "http",
       .callback = lws_http_callback,
       .id = 0,
-      .user = server,
+      .user = s,
       .per_session_data_size = sizeof(struct mn_pss),
       .rx_buffer_size = 0,
       .tx_packet_size = 0};
@@ -747,7 +747,7 @@ struct mn_status mn_server_run(struct mn_server server[static 1])
   lws_context_info_defaults(&info, nullptr);
   info.mounts = &http_mount;
   info.options = LWS_SERVER_OPTION_EXPLICIT_VHOSTS;
-  info.port = server->config.port;
+  info.port = s->config.port;
   info.pprotocols = pprotocols;
   info.server_string = "makinori";
   info.vhost_name = "localhost";
@@ -762,7 +762,7 @@ struct mn_status mn_server_run(struct mn_server server[static 1])
     return MN_ERROR_EMIT(MN_ERROR_SYSTEM, "Could not create lws vhost");
   }
 
-  mn_log_notice("Starting server on port %ld", server->config.port);
+  mn_log_notice("Starting server on port %ld", s->config.port);
 
   int status = 0;
   while (status >= 0 && SERVER_RUNNING) {

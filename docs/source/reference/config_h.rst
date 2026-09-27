@@ -51,7 +51,14 @@ API
       If successful, the :c:expr:`out` parameter must be cleaned up using
       :c:func:`mn_config_unload`.
 
-      :param out: The :c:struct:`mn_config` reference to load.
+      :arg out: The :c:struct:`mn_config` reference to load.
+
+      :return: | An :c:struct:`mn_status` with value:
+               | - :c:member:`MN_ERROR_NONE` on success;
+               | - :c:member:`MN_ERROR_CONFIG` on failure.
+
+      :aborts: If space for :c:macro:`MN_REQUEST_MAX_CAPTURES` could not be
+               allocated.
 
    .. c:function:: struct mn_status mn_config_load_with( \
                        struct mn_str const path, \
@@ -63,14 +70,23 @@ API
       If successful, the :c:expr:`out` parameter must be cleaned up using
       :c:func:`mn_config_unload`.
 
-      :param path: The location of a lua file to execute.
-      :param out: The :c:struct:`mn_config` reference to load.
+      :arg path: The location of a lua file to execute.
 
-   .. c:function:: struct mn_status mn_config_unload( \
-                       struct mn_config[const static 1])
+      :arg out: The :c:struct:`mn_config` reference to load.
 
-      Unload the configuration object.
+      :return: | An :c:struct:`mn_status` with value:
+               | - :c:member:`MN_ERROR_NONE` on success;
+               | - :c:member:`MN_ERROR_CONFIG` on failure.
 
-      Should be run once finished with a :c:struct:`mn_config` object
-      successfully loaded by a call to :c:func:`mn_config_load` or
-      :c:func:`mn_config_load_with`.
+      :aborts: If space for :c:macro:`MN_REQUEST_MAX_CAPTURES` could not be
+               allocated.
+
+   .. c:function:: void mn_config_unload(struct mn_config c[const static 1])
+
+      Unloads a configuration object.
+
+      Should be called once you are finished using a :c:struct:`mn_config`
+      object that was successfully loaded by a call to :c:func:`mn_config_load`
+      or :c:func:`mn_config_load_with`.
+
+      :arg c: The configuration to unload.

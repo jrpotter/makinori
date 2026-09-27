@@ -21,4 +21,4 @@ struct mn_status mn_config_load(struct mn_config out[const static 1]);
 struct mn_status
 mn_config_load_with(struct mn_str const path, struct mn_config out[const static 1]);
 
-void mn_config_unload(struct mn_config[const static 1]);
+void mn_config_unload(struct mn_config c[const static 1]);
