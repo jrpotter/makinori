@@ -21,8 +21,9 @@ struct mn_view const mn_view_ref(char const ss[static 1], size_t const len);
 struct mn_view const
 mn_view_substr(struct mn_view const v, size_t const i, size_t const j);
 
-bool mn_view_eq(struct mn_view const, struct mn_view const);
+size_t mn_view_cpy(char *const dst, struct mn_view src);
 
+bool mn_view_eq(struct mn_view const, struct mn_view const);
 bool mn_view_ieq(struct mn_view const, struct mn_view const);
 
 // =================================================================================
@@ -46,6 +47,11 @@ inline struct mn_view const
 mn_str_substr(struct mn_str const s, size_t const i, size_t const j)
 {
   return mn_view_substr(mn_str_to_view(s), i, j);
+}
+
+inline size_t mn_str_cpy(char *const dst, struct mn_str src)
+{
+  return mn_view_cpy(dst, mn_str_to_view(src));
 }
 
 inline bool mn_str_eq(struct mn_str const s1, struct mn_str const s2)

@@ -7,6 +7,9 @@ CPPFLAGS = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=202405L -D_GNU_SOURCE
 LDFLAGS =
 LDLIBS =
 
+# shell/find searches arbitrarily deep unlike wildcard.
+OBJS = $(patsubst %.c,%.o,$(shell find ./src -name "*.c"))
+
 # ==================================================================================
 # Configuration
 
@@ -25,8 +28,6 @@ LDLIBS += -lwebsockets -llua5.4
 # are generated on subsequent builds.
 CFLAGS += -MMD
 
--include $(OBJS:.o=.d)
-
 # ==================================================================================
 # Hardening
 
@@ -44,18 +45,20 @@ else
 endif
 
 # ==================================================================================
-# General
-
-# shell/find searches arbitrarily deep unlike wildcard.
-OBJS += $(patsubst %.c,%.o,$(shell find ./src -name "*.c"))
+# Recipes
 
 .PHONY: clean
 
-%: examples/%.o $(OBJS)
+all: bin/cmdline-usage
+
+bin/%: examples/%.o $(OBJS)
 	mkdir -p bin
-	$(CC) $^ -o bin/$@ $(LDFLAGS) $(LDLIBS)
+	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
 
 clean:
 	find . -name "*.d" -delete
 	find . -name "*.o" -delete
 	-rm -r bin
+
+# Include at the end to avoid interfering with default rules.
+-include $(OBJS:.o=.d)

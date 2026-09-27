@@ -31,6 +31,14 @@ mn_view_substr(struct mn_view const v, size_t const i, size_t const j)
   return substr;
 }
 
+size_t mn_view_cpy(char *const dst, struct mn_view src)
+{
+  for (size_t i = 0; i < src.len; ++i) {
+    dst[i] = src.ss_[i];
+  }
+  return src.len;
+}
+
 bool mn_view_eq(struct mn_view const v1, struct mn_view const v2)
 {
   if (v1.len != v2.len) {
@@ -79,11 +87,10 @@ struct mn_str const mn_str_ref(char const ss[static 1], size_t const len)
   return (struct mn_str){.ss = ss, .len = count};
 }
 
-struct mn_view const mn_str_to_view(struct mn_str const); // Emit inline
+// --- Emit inlines ----------------------------------------------------------------
 
-struct mn_view const
-mn_str_substr(struct mn_str const, size_t const, size_t const); // Emit inline
-
-bool mn_str_eq(struct mn_str const, struct mn_str const); // Emit inline
-
-bool mn_str_ieq(struct mn_str const, struct mn_str const); // Emit inline
+struct mn_view const mn_str_to_view(struct mn_str const);
+struct mn_view const mn_str_substr(struct mn_str const, size_t const, size_t const);
+size_t mn_str_cpy(char *const, struct mn_str);
+bool mn_str_eq(struct mn_str const, struct mn_str const);
+bool mn_str_ieq(struct mn_str const, struct mn_str const);

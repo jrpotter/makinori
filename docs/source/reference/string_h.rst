@@ -58,13 +58,21 @@ Views
    .. c:function:: struct mn_view const mn_view_substr( \
                        struct mn_view const v, \
                        size_t const i, \
-                       size_t const j);
+                       size_t const j)
 
       Create a subview of another.
 
       :arg v: The :c:struct:`mn_view` to take a subview of.
       :arg i: The starting index of the subview, inclusive.
       :arg j: The ending index of the subview, exclusive.
+
+   .. c:function:: size_t mn_view_cpy(char *const dst, struct mn_view src)
+
+      Copy the contents of ``src`` into ``dst``. This does *not* terminate the
+      copy with a ``NUL`` character.
+
+      :arg dst: The buffer to copy ``src`` into.
+      :arg src: The string to copy into ``dst``.
 
    .. c:function:: bool mn_view_eq(struct mn_view const, struct mn_view const)
 
@@ -124,13 +132,21 @@ Strings
    .. c:function:: struct mn_view const mn_str_substr( \
                        struct mn_str const s, \
                        size_t const i, \
-                       size_t const j);
+                       size_t const j)
 
       Create a view from a string.
 
       :arg s: The :c:struct:`mn_str` to take a view of.
       :arg i: The starting index of the view, inclusive.
       :arg j: The ending index of the view, exclusive.
+
+   .. c:function:: size_t mn_str_cpy(char *const dst, struct mn_str src)
+
+      Copy the contents of ``src`` into ``dst``. This does *not* terminate the
+      copy with a ``NUL`` character.
+
+      :arg dst: The buffer to copy ``src`` into.
+      :arg src: The string to copy into ``dst``.
 
    .. c:function:: bool mn_str_eq(struct mn_str const, struct mn_str const)
 
