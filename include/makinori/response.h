@@ -2,12 +2,14 @@
 
 #include "makinori/string.h"
 
+struct mn_response;
+
 enum mn_http_code : unsigned int {
   MN_HTTP_CODE_OK = 200,
   MN_HTTP_CODE_CREATED = 201,
 };
 
-struct mn_response;
+struct mn_status mn_response_suspend(struct mn_response *const res);
 
 struct mn_status
 mn_response_set_code(struct mn_response *const, enum mn_http_code code);

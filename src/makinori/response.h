@@ -10,6 +10,11 @@
 #include "makinori/response.h"
 #include "makinori/util.h"
 
+// A reference to our main context. Every coroutine links back to this.
+extern thread_local ucontext_t context_server;
+
+struct mn_status mn_response_resume(struct mn_response *const res);
+
 // Our choice of libwebsockets means we are bound to some of its design
 // decisions. In particular, unless we are willing to hold arbitrary amounts of
 // memory "staging" content, the user must write the response header before they
@@ -83,10 +88,3 @@ struct mn_response {
   // accidental stack overflows.
   void *coro_stack;
 };
-
-// A reference to our main context. Every coroutine links back to this.
-extern thread_local ucontext_t context_server;
-
-struct mn_status mn_response_suspend(struct mn_response *const);
-
-struct mn_status mn_response_resume(struct mn_response *const);

@@ -20,6 +20,12 @@ API
 
       An opaque object representing the response to send back to the client.
 
+   .. c:function:: struct mn_status mn_response_suspend(struct mn_response *const res)
+
+      To be invoked within an :c:type:`mn_route_handler_t`. Suspends
+      the current handler, yielding control back to the :ref:`event loop
+      <ref-concepts-event-loop>`.
+
    .. c:function:: struct mn_status mn_response_set_code( \
                        struct mn_response *const res, \
                        enum mn_http_code code)

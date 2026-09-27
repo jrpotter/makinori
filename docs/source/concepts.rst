@@ -209,14 +209,38 @@ method that writes to the body.
 Event Loop
 ----------
 
-TODO: Primary event loop. Based on poll. Each server instance must be single-threaded.
+Every :c:struct:`mn_server` instance runs an event loop. For the most part, this
+should be a relatively transparent feature of **makinori**, but there are a few
+caveats that should be considered:
+
+1. Each :c:struct:`mn_server` instance must reside in its own thread. To be
+   clear, you can run multiple threads without issue. But, within any particular
+   response handler, you must not spawn a new thread. To do so invokes the wrath
+   of *undefined behavior*.
+2. Your :c:type:`mn_route_handler_t` handler functions must work together.
+   Avoid hogging the CPU or blocking on I/O since the entire event loop
+   necessarily waits alongside your handler. This is elaborated on :ref:`below
+   <ref-concepts-coroutines>`.
+
+The default event loop is managed using ``poll``. We plan on supporting other
+event loops in the future (namely those already supported by `libwebsockets`_),
+but doing so is not a priority. Please file an issue if the need arises.
+
+.. _libwebsockets: https://libwebsockets.org/
+
+.. _ref-concepts-coroutines:
 
 Coroutines
 ^^^^^^^^^^
 
-TODO: Each route handler is its own stackful coroutine.
+As it turns out, every :c:type:`mn_route_handler_t` defined within an
+:c:struct:`mn_route` runs within its own stackful coroutine. Methods that
+perform I/O (e.g. :c:func:`mn_response_write`) will automatically yield control
+at opportune moments, relying on the event loop to eventually resume the
+suspended handler (ideally once asynchronous I/O operations are finished).
 
-Extensions
-^^^^^^^^^^
-
-TODO: How to write your own functions and making sure to suspend appropriately.
+As such, it is important to write *cooperative* handlers. Avoid locking the CPU
+indefinitely or running blocking I/O operations since the entire event loop will
+otherwise block as well. For cases where the existing API falls shorts, you can
+voluntarily suspend your coroutine using :c:func:`mn_response_suspend`. It is up
+to the internal scheduler to eventually resume your handler.
