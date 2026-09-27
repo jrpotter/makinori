@@ -1,6 +1,6 @@
-_G.nori = {}
+_G.makinori = {}
 
-function nori.anchor_string_match(path, pattern)
+function makinori.anchor_string_match(path, pattern)
   if pattern:sub(1, 1) ~= '^' then
     pattern = '^' .. pattern
   end

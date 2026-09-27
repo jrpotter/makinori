@@ -122,7 +122,7 @@ static struct mn_route const *const mn_route_match(
     return nullptr;
   }
 
-  lua_getglobal(server->config.lua_, "nori");
+  lua_getglobal(server->config.lua_, "makinori");
 
   struct mn_route const *match = nullptr;
 

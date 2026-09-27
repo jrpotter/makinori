@@ -27,21 +27,19 @@ API
 
       .. c:member:: unsigned long long coro_pages
 
-      The number of virtual memory pages allocated to each coroutine. In actuality,
-      one additional page is allocated as a guard to protect against stack
-      overflows.
+         A reference to the :ref:`ref-config-coroutine-pages` option.
 
       .. c:member:: enum mn_event_loop ev_loop
 
-      The underlying event loop library used by the :c:struct:`mn_server`.
+         A reference to the :ref:`ref-config-event-loop` option.
 
       .. c:member:: enum mn_log_level log_level
 
-      The minimum log level that should be emitted when running.
+         A reference to the :ref:`ref-config-log-level` option.
 
       .. c:member:: unsigned long port
 
-      The port that the server will be listening on.
+         A reference to the :ref:`ref-config-port` option.
 
    .. c:function:: struct mn_status mn_config_load( \
                        struct mn_config out[const static 1])

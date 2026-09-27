@@ -1,7 +1,7 @@
 assert(
-  type(COROUTINE_PAGES) == 'number' and (
-    COROUTINE_PAGES > 0
-  ),
+  type(COROUTINE_PAGES) == 'number' and
+  math.type(COROUTINE_PAGES) == 'integer' and
+  COROUTINE_PAGES > 0,
   'COROUTINE_PAGES must be > 0'
 )
 
