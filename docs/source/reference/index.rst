@@ -1,9 +1,8 @@
 Reference
 =========
 
-All API functions are prefixed with ``mn_``. Every header except for
-:doc:`cmdline_h` (unless :c:macro:`MN_CMDLINE_SOURCE` is defined) is
-automatically pulled in using:
+All API functions are prefixed with ``mn_``. Every header is automatically
+pulled in using:
 
 .. code-block:: c
 

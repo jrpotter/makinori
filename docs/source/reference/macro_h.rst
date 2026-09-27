@@ -17,6 +17,22 @@ API
          int arr[] = {1, 2, 3};
          static_assert(MN_ARR_SIZE(arr) == 3);
 
+   .. c:macro:: MN_MAX(X, Y)
+
+      Return the larger of ``X`` and ``Y``.
+
+      .. code-block:: c
+
+         static_assert(MN_MAX(1, 2) == 2);
+
+   .. c:macro:: MN_MIN(X, Y)
+
+      Return the smaller of ``X`` and ``Y``.
+
+      .. code-block:: c
+
+         static_assert(MN_MAX(1, 2) == 1);
+
    .. c:macro:: MN_PAIR(T1, T2)
 
       Produces an anonymous ``struct`` corresponding to a pair of types.

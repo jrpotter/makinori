@@ -27,27 +27,33 @@ CFLAGS += -MMD
 
 -include $(OBJS:.o=.d)
 
+# ==================================================================================
+# Hardening
+
 # Force the compiler to allocate one page of stack space at a time, immediately
 # accessing the page after allocation. This ensures no means of jumping over the
 # guard page setup on our coroutine stacks.
 CFLAGS += -fstack-clash-protection
+
+ifeq ($(BUILD_TYPE),Debug)
+	CFLAGS += -g -O0
+else
+	CFLAGS += -O2
+	CPPFLAGS += -DNDEBUG
+	LDFLAGS += -s
+endif
+
+# ==================================================================================
+# General
 
 # shell/find searches arbitrarily deep unlike wildcard.
 OBJS += $(patsubst %.c,%.o,$(shell find ./src -name "*.c"))
 
 .PHONY: clean
 
-server: $(OBJS)
+%: examples/%.o $(OBJS)
 	mkdir -p bin
 	$(CC) $^ -o bin/$@ $(LDFLAGS) $(LDLIBS)
-
-debug: server
-debug: CFLAGS += -g -O0
-
-release: server
-release: CFLAGS += -O2
-release: CPPFLAGS += -DNDEBUG
-release: LDFLAGS += -s
 
 clean:
 	find . -name "*.d" -delete

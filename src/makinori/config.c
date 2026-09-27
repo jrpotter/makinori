@@ -33,8 +33,6 @@ struct mn_status mn_config_load(struct mn_config out[const static 1])
 struct mn_status
 mn_config_load_with(struct mn_str const path, struct mn_config out[const static 1])
 {
-  memset(out, 0, sizeof(*out));
-
   lua_State *L = luaL_newstate();
   luaL_openlibs(L);
 
