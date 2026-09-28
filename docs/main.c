@@ -74,6 +74,7 @@ int main(void)
     return EXIT_FAILURE;
   }
 
+  config.port = 1314;
   struct mn_server server = {.config = config, .route = route_main};
   status = mn_server_run(&server);
 
