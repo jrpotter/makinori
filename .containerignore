@@ -1,0 +1,11 @@
+**/*.d
+**/*.o
+.DS_Store
+.cache/
+.git
+.gitignore
+build/
+compile_commands.json
+docs/_build
+lib/libwebsockets
+lib/lua

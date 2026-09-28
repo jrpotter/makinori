@@ -1,0 +1,22 @@
+[Unit]
+Description=makinori documentation
+
+[Container]
+ContainerName=makinori
+Image=localhost/makinori:latest
+PublishPort=1314:1314
+
+HealthCmd=curl -fsS http://127.0.0.1:1314|| exit 1
+HealthInterval=2m
+HealthOnFailure=kill
+HealthRetries=3
+HealthStartPeriod=5m
+HealthTimeout=5s
+
+[Service]
+Restart=always
+RestartSec=10
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target
