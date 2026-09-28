@@ -6,6 +6,7 @@
 // Headers
 
 struct mn_str constexpr MN_HEADER_CONTENT_TYPE = mn_str_lit("Content-Type");
+struct mn_str constexpr MN_HEADER_LOCATION = mn_str_lit("Location");
 
 // =================================================================================
 // Media Types

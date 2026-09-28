@@ -10,6 +10,10 @@ Headers
 
    An :c:struct:`mn_str` with value ``Content-Type``.
 
+.. c:var:: struct mn_str const MN_HEADER_LOCATION
+
+   An :c:struct:`mn_str` with value ``Location``.
+
 Media Types
 -----------
 
