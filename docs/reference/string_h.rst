@@ -65,13 +65,18 @@ Views
    :arg i: The starting index of the subview, inclusive.
    :arg j: The ending index of the subview, exclusive.
 
-.. c:function:: size_t mn_view_cpy(char *const dst, struct mn_view const src)
+.. c:function:: size_t mn_view_cpy( \
+                    char *const dst, \
+                    struct mn_view const src, \
+                    size_t const count)
 
-   Copy the contents of ``src`` into ``dst``. This does *not* terminate the copy
-   with a ``NUL`` character.
+   Copy the contents of ``src`` into ``dst``.
 
    :arg dst: The buffer to copy ``src`` into.
    :arg src: The string to copy into ``dst``.
+   :arg count: *OPTIONAL*. The maximum number of characters to copy. Ignored
+               if greater than ``src``'s :c:member:`~mn_view.len`. If excluded,
+               ``SIZE_MAX`` is assumed.
 
 .. c:function:: size_t mn_view_find( \
                     struct mn_view const haystack, \

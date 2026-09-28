@@ -3,27 +3,26 @@
 // =================================================================================
 // Router
 
-static struct mn_str constexpr css_ext = mn_str_lit(".css");
-static struct mn_str constexpr html_ext = mn_str_lit(".html");
-static struct mn_str constexpr js_ext = mn_str_lit(".js");
+static struct mn_str constexpr CSS_EXT = mn_str_lit(".css");
+static struct mn_str constexpr HTML_EXT = mn_str_lit(".html");
+static struct mn_str constexpr JS_EXT = mn_str_lit(".js");
+static struct mn_str constexpr PREFIX = mn_str_lit("docs/_build/html/");
 
-static struct mn_status
-handle_docs(struct mn_request req, struct mn_response *const res)
+static struct mn_status handle_dir(struct mn_request req, struct mn_response *const res)
 {
   mn_assert(req.capture_count == 1);
 
   char buffer[MN_REQUEST_MAX_PATH_LEN] = {};
-  struct mn_str prefix = mn_str_lit("docs/_build/html/");
-  size_t total = mn_view_cpy(buffer, prefix.view);
-  total += mn_view_cpy(buffer + prefix.len, req.captures[0]);
+  size_t n = mn_view_cpy(buffer, PREFIX.view, MN_REQUEST_MAX_PATH_LEN);
+  n += mn_view_cpy(buffer + n, req.captures[0], MN_REQUEST_MAX_PATH_LEN - n);
 
-  struct mn_str const filename = mn_str_ref(buffer, total);
+  struct mn_str const filename = mn_str_ref(buffer, n);
 
   MN_PAIR(struct mn_str, struct mn_str)
   media[] = {
-      {css_ext, MN_MEDIA_TYPE_CSS},
-      {html_ext, MN_MEDIA_TYPE_HTML},
-      {js_ext, MN_MEDIA_TYPE_JAVASCRIPT},
+      {CSS_EXT, MN_MEDIA_TYPE_CSS},
+      {HTML_EXT, MN_MEDIA_TYPE_HTML},
+      {JS_EXT, MN_MEDIA_TYPE_JAVASCRIPT},
   };
 
   for (size_t i = 0; i < MN_ARR_SIZE(media); ++i) {
@@ -40,31 +39,29 @@ handle_docs(struct mn_request req, struct mn_response *const res)
 }
 
 static struct mn_status
-handle_redirect(struct mn_request req, struct mn_response *const res)
+handle_main(struct mn_request req, struct mn_response *const res)
 {
   auto status = mn_response_set_code(res, MN_HTTP_MOVED_PERMANENTLY);
   if (status.error) {
     return status;
   }
-
   status = mn_response_set_header(res, MN_HEADER_LOCATION, mn_str_lit("/index.html"));
   if (status.error) {
     return status;
   }
-
   return MN_SUCCESS;
 }
 
-static struct mn_route route_docs = {
+static struct mn_route route_dir = {
     .method = MN_METHOD_GET,
     .pattern = mn_str_lit("/(.*)"),
-    .handler = handle_docs};
+    .handler = handle_dir};
 
-static struct mn_route route_redirect = {
+static struct mn_route route_main = {
     .method = MN_METHOD_GET,
     .pattern = mn_str_lit("/"),
-    .next = &route_docs,
-    .handler = handle_redirect};
+    .next = &route_dir,
+    .handler = handle_main};
 
 // =================================================================================
 // Main
@@ -77,7 +74,7 @@ int main(void)
     return EXIT_FAILURE;
   }
 
-  struct mn_server server = {.config = config, .route = route_redirect};
+  struct mn_server server = {.config = config, .route = route_main};
   status = mn_server_run(&server);
 
   mn_config_unload(&config);

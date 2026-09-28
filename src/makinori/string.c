@@ -31,12 +31,13 @@ mn_view_substr(struct mn_view const v, size_t const i, size_t const j)
   return substr;
 }
 
-size_t mn_view_cpy(char *const dst, struct mn_view const src)
+size_t(mn_view_cpy)(char *const dst, struct mn_view const src, size_t const count)
 {
-  for (size_t i = 0; i < src.len; ++i) {
+  size_t const limit = MN_MIN(src.len, count);
+  for (size_t i = 0; i < limit; ++i) {
     dst[i] = src.ss_[i];
   }
-  return src.len;
+  return limit;
 }
 
 size_t mn_view_find(struct mn_view const haystack, struct mn_view const needle)

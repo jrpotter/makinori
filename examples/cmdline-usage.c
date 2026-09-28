@@ -28,7 +28,6 @@ handle_index(struct mn_request req, struct mn_response *const res)
 static struct mn_route route_index = {
     .method = MN_METHOD_GET,
     .pattern = mn_str_lit("/"),
-    .next = nullptr,
     .handler = handle_index};
 
 // =================================================================================
