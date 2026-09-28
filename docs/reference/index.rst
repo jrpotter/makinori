@@ -17,6 +17,7 @@ issue.
 
    cmdline_h
    config_h
+   constants_h
    logger_h
    macro_h
    request_h

@@ -60,88 +60,89 @@ Here is a full example to demonstrate usage.
      return EXIT_SUCCESS;
    }
 
+Options
+-------
+
+.. c:macro:: MN_CMDLINE_MAX_FLAGS
+
+   Defaults to 16. The maximum number of flags that can be parsed. To update,
+   define *before* including **makinori**:
+
+   .. code-block:: c
+
+      #define MN_CMDLINE_MAX_FLAGS 32
+      #include "makinori.h"
+
+.. c:macro:: MN_CMDLINE_MAX_ARITY
+
+   Defaults to 8. The maximum number of values any one flag can have. To
+   update, define *before* including **makinori**:
+
+   .. code-block:: c
+
+      #define MN_CMDLINE_MAX_ARITY 16
+      #include "makinori.h"
+
 API
 ---
 
-.. container:: api
+.. c:struct:: mn_flag
 
-   .. c:macro:: MN_CMDLINE_MAX_FLAGS
+   A representation of a command line flag.
 
-      Defaults to 16. The maximum number of flags that can be parsed. To update,
-      define *before* including **makinori**:
+   .. c:member:: struct mn_str sflag
 
-      .. code-block:: c
+      The "short" flag, e.g. ``h``. An empty string means no short flag exists.
 
-         #define MN_CMDLINE_MAX_FLAGS 32
-         #include "makinori.h"
+   .. c:member:: struct mn_str lflag
 
-   .. c:macro:: MN_CMDLINE_MAX_ARITY
+      The "long" flag, e.g. ``help``. An empty string means no long flag exists.
 
-      Defaults to 8. The maximum number of values any one flag can have. To
-      update, define *before* including **makinori**:
+   .. c:member:: unsigned int arity
 
-      .. code-block:: c
+      The number of arguments to expect. The argument count is exact; too few or
+      too many and the parser will complain.
 
-         #define MN_CMDLINE_MAX_ARITY 16
-         #include "makinori.h"
+   .. c:member:: bool set
 
-   .. c:struct:: mn_flag
+      Whether the flag was set. Mostly useful in the case of a flag with
+      :c:enum:`mn_flag_arity` zero.
 
-      A representation of a command line flag.
+   .. c:member:: struct mn_str vals[MN_FLAG_ARITY_MAX]
 
-      .. c:member:: struct mn_str sflag
+      The values following the flag. After a call to :c:func:`mn_cmdline_parse`,
+      :c:expr:`vals[0]` will contain the first value, :c:expr:`vals[1]` contains
+      the second value, and so on.
 
-         The "short" flag, e.g. ``h``. An empty string means no short flag exists.
+.. c:struct:: mn_cmdline
 
-      .. c:member:: struct mn_str lflag
+   The object populated after a successful call to :c:func:`mn_cmdline_parse`.
 
-         The "long" flag, e.g. ``help``. An empty string means no long flag exists.
+   .. c:member:: struct mn_str action
 
-      .. c:member:: unsigned int arity
+      Either an empty string (if no action is specified) or the single
+      positional argument supplied in the command.
 
-         The number of arguments to expect. The argument count is exact; too few or
-         too many and the parser will complain.
+   .. c:member:: struct mn_flag *flags
 
-      .. c:member:: bool set
+      A list of flags to search the command line for. If two flags have
+      the same :c:member:`~mn_flag.sflag` or :c:member:`~mn_flag.lflag`,
+      the first in the list takes priority. You must not specify more than
+      :c:macro:`MN_CMDLINE_MAX_FLAGS` entries.
 
-         Whether the flag was set. Mostly useful in the case of a flag with
-         :c:enum:`mn_flag_arity` zero.
+      Call :c:func:`mn_cmdline_parse` only *after* this array has been set.
 
-      .. c:member:: struct mn_str vals[MN_FLAG_ARITY_MAX]
+.. c:function:: struct mn_status mn_cmdline_parse( \
+                    int const argc, \
+                    char const *argv[const argc], \
+                    struct mn_cmdline cl[static 1])
 
-         The values following the flag. After a call to :c:func:`mn_cmdline_parse`,
-         :c:expr:`vals[0]` will contain the first value, :c:expr:`vals[1]` contains
-         the second value, and so on.
+   Parses the command line.
 
-   .. c:struct:: mn_cmdline
+   :arg argc: The ``argc`` as supplied to ``main``.
+   :arg argv: The ``argv`` as supplied to ``main``.
+   :arg cl: A pointer to the :c:struct:`mn_cmdline` to populate.
 
-      The object populated after a successful call to :c:func:`mn_cmdline_parse`.
-
-      .. c:member:: struct mn_str action
-
-         Either an empty string (if no action is specified) or the single
-         positional argument supplied in the command.
-
-      .. c:member:: struct mn_flag *flags
-
-         A list of flags to search the command line for. If two flags have the
-         same :c:member:`~mn_flag.sflag` or :c:member:`~mn_flag.lflag`, the
-         first in the list takes priority. You must not specify more than
-         :c:macro:`MN_CMDLINE_MAX_FLAGS` entries.
-
-         Call :c:func:`mn_cmdline_parse` only *after* this array has been set.
-
-   .. c:function:: struct mn_status mn_cmdline_parse( \
-                       int const argc, \
-                       char const *argv[const argc], \
-                       struct mn_cmdline cl[static 1])
-
-      Parses the command line.
-
-      :arg argc: The ``argc`` as supplied to ``main``.
-      :arg argv: The ``argv`` as supplied to ``main``.
-      :arg cl: A pointer to the :c:struct:`mn_cmdline` to populate.
-
-      :return: | An :c:struct:`mn_status` with value:
-               | - :c:member:`MN_ERROR_NONE` on success;
-               | - :c:member:`MN_ERROR_CONFIG` on failure.
+   :return: | An :c:struct:`mn_status` with value:
+            | - :c:member:`MN_ERROR_NONE` on success;
+            | - :c:member:`MN_ERROR_CONFIG` on failure.

@@ -10,129 +10,126 @@ API
 Views
 ^^^^^
 
-.. container:: api
+.. c:struct:: mn_view
 
-   .. c:struct:: mn_view
+   A portion of a string. Unlike the :c:struct:`mn_str` type, this type only
+   refers to part of a **backing string**. This backing string must remain valid
+   for the duration of a :c:struct:`mn_view` instance's lifetime.
 
-      A portion of a string. Unlike the :c:struct:`mn_str` type, this type only
-      refers to part of a **backing string**. This backing string must remain valid
-      for the duration of a :c:struct:`mn_view` instance's lifetime.
+   .. c:member:: size_t len
 
-      .. c:member:: size_t len
+      The length of the referenced portion of some string.
 
-         The length of the referenced portion of some string.
+.. c:macro:: PRImnv
 
-   .. c:macro:: PRImnv
+   A utility macro for including the contents of a :c:struct:`mn_view` into
+   a :c:expr:`printf` call. Should be used with :c:macro:`mn_view_pri`. For
+   example:
 
-      A utility macro for including the contents of a :c:struct:`mn_view` into a
-      :c:expr:`printf` call. Should be used with :c:macro:`mn_view_pri`. For example:
+   .. code-block:: c
 
-      .. code-block:: c
+      struct mn_view const v = mn_view_ref("hello, world", 5);
+      printf("View: " PRImnv "\n", mn_view_pri(v));
+      // Outputs: View hello\n
 
-         struct mn_view const v = mn_view_ref("hello, world", 5);
-         printf("View: " PRImnv "\n", mn_view_pri(v));
-         // Outputs: View hello\n
+.. c:macro:: mn_view_pri(X)
 
-   .. c:macro:: mn_view_pri(X)
+   A utility macro for including the contents of a :c:struct:`mn_view` into a
+   :c:expr:`printf` call. Should be used with :c:macro:`PRImnv`. For example:
 
-      A utility macro for including the contents of a :c:struct:`mn_view` into a
-      :c:expr:`printf` call. Should be used with :c:macro:`PRImnv`. For example:
+   .. code-block:: c
 
-      .. code-block:: c
+      struct mn_view const v = mn_view_ref("hello, world", 5);
+      printf("View: " PRImnv "\n", mn_view_pri(v));
+      // Outputs: View hello\n
 
-         struct mn_view const v = mn_view_ref("hello, world", 5);
-         printf("View: " PRImnv "\n", mn_view_pri(v));
-         // Outputs: View hello\n
+.. c:function:: struct mn_view const mn_view_ref( \
+                    char const ss[static 1], \
+                    size_t const len)
 
-   .. c:function:: struct mn_view const mn_view_ref( \
-                       char const ss[static 1], \
-                       size_t const len)
+   Create a new :c:struct:`mn_view` pointing to ``ss`` with length ``len``.
 
-      Create a new :c:struct:`mn_view` pointing to ``ss`` with length ``len``.
+   :arg ss: The C-string to point to. Must remain valid during the lifetime of
+            the :c:struct:`mn_view` instance.
+   :arg len: The length of the portion of the string the :c:struct:`mn_view`
+             references.
 
-      :arg ss: The C-string to point to. Must remain valid during the lifetime of
-               the :c:struct:`mn_view` instance.
-      :arg len: The length of the portion of the string the :c:struct:`mn_view`
-                references.
+.. c:function:: struct mn_view const mn_view_substr( \
+                    struct mn_view const v, \
+                    size_t const i, \
+                    size_t const j)
 
-   .. c:function:: struct mn_view const mn_view_substr( \
-                       struct mn_view const v, \
-                       size_t const i, \
-                       size_t const j)
+   Create a subview of another.
 
-      Create a subview of another.
+   :arg v: The :c:struct:`mn_view` to take a subview of.
+   :arg i: The starting index of the subview, inclusive.
+   :arg j: The ending index of the subview, exclusive.
 
-      :arg v: The :c:struct:`mn_view` to take a subview of.
-      :arg i: The starting index of the subview, inclusive.
-      :arg j: The ending index of the subview, exclusive.
+.. c:function:: size_t mn_view_cpy(char *const dst, struct mn_view const src)
 
-   .. c:function:: size_t mn_view_cpy(char *const dst, struct mn_view const src)
+   Copy the contents of ``src`` into ``dst``. This does *not* terminate the copy
+   with a ``NUL`` character.
 
-      Copy the contents of ``src`` into ``dst``. This does *not* terminate the
-      copy with a ``NUL`` character.
+   :arg dst: The buffer to copy ``src`` into.
+   :arg src: The string to copy into ``dst``.
 
-      :arg dst: The buffer to copy ``src`` into.
-      :arg src: The string to copy into ``dst``.
+.. c:function:: size_t mn_view_find( \
+                    struct mn_view const haystack, \
+                    struct mn_view const needle)
 
-   .. c:function:: size_t mn_view_find( \
-                       struct mn_view const haystack, \
-                       struct mn_view const needle)
+   Find the first index of ``haystack`` in which subview ``needle`` is found.
 
-      Find the first index of ``haystack`` in which subview ``needle`` is found.
+   :arg haystack: The view to search the ``needle`` in.
+   :arg needle: The subview to search for.
 
-      :arg haystack: The view to search the ``needle`` in.
-      :arg needle: The subview to search for.
+   :return: The index the ``needle`` was found starting at. If not present,
+            ``haystack.len`` is returned instead.
 
-      :return: The index the ``needle`` was found starting at. If not present,
-               ``haystack.len`` is returned instead.
+.. c:function:: bool mn_view_eq(struct mn_view const, struct mn_view const)
 
-   .. c:function:: bool mn_view_eq(struct mn_view const, struct mn_view const)
+   Case-sensitive equality checking. Checks two :c:struct:`mn_view` instances
+   are equal, byte-per-byte.
 
-      Case-sensitive equality checking. Checks two :c:struct:`mn_view` instances
-      are equal, byte-per-byte.
+.. c:function:: bool mn_view_ieq(struct mn_view const, struct mn_view const)
 
-   .. c:function:: bool mn_view_ieq(struct mn_view const, struct mn_view const)
-
-      Case-insensitive equality checking. Checks two :c:struct:`mn_view` instances
-      are equal, ignoring case for ASCII characters. In other words, this only
-      works as outlined when restricting attention to just strings in the BMP.
+   Case-insensitive equality checking. Checks two :c:struct:`mn_view` instances
+   are equal, ignoring case for ASCII characters. In other words, this only
+   works as outlined when restricting attention to just strings in the BMP.
 
 Strings
 ^^^^^^^
 
-.. container:: api
+.. c:struct:: mn_str
 
-   .. c:struct:: mn_str
+   A thin wrapper around a C-style string. Unlike the :c:struct:`mn_view` type,
+   this type always refers to the entirety of a **backing string**. This backing
+   string must remain valid for the duration of a :c:struct:`mn_str` instance's
+   lifetime.
 
-      A thin wrapper around a C-style string. Unlike the :c:struct:`mn_view` type,
-      this type always refers to the entirety of a **backing string**. This backing
-      string must remain valid for the duration of a :c:struct:`mn_str` instance's
-      lifetime.
+   This type is primarily motivated as a convenient means of referencing C-style
+   strings' length.
 
-      This type is primarily motivated as a convenient means of referencing C-style
-      strings' length.
+   .. c:member:: char const *ss
 
-      .. c:member:: char const *ss
+      The backing string.
 
-         The backing string.
+   .. c:member:: size_t len
 
-      .. c:member:: size_t len
+      The length of the backing string excluding the trailing ``NUL`` character.
 
-         The length of the backing string excluding the trailing ``NUL`` character.
+.. c:macro:: mn_str_lit(X)
 
-   .. c:macro:: mn_str_lit(X)
+   Create a new :c:struct:`mn_str` instance pointing at C-string literal
+   ``X``. It is assumed ``X`` does not contain embedded ``NUL`` characters.
 
-      Create a new :c:struct:`mn_str` instance pointing at C-string literal
-      ``X``. It is assumed ``X`` does not contain embedded ``NUL`` characters.
+.. c:function:: struct mn_str const mn_str_ref( \
+                    char const ss[static 1], \
+                    size_t const len)
 
-   .. c:function:: struct mn_str const mn_str_ref( \
-                       char const ss[static 1], \
-                       size_t const len)
+   Create a new :c:struct:`mn_str` pointing to ``ss`` with length ``len``.
+   It is assumed ``ss`` does not contain embedded ``NUL`` characters and is
+   ``NUL``-terminated with :c:expr:`ss[len] == '\\0'`.
 
-      Create a new :c:struct:`mn_str` pointing to ``ss`` with length ``len``. It
-      is assumed ``ss`` does not contain embedded ``NUL`` characters and is
-      ``NUL``-terminated with :c:expr:`ss[len] == '\\0'`.
-
-      :arg ss: The C-string to point to. Must remain valid during the lifetime of
-               the :c:struct:`mn_str` instance.
-      :arg len: The length of ``ss`` excluding the trailing ``NUL`` character.
+   :arg ss: The C-string to point to. Must remain valid during the lifetime of
+            the :c:struct:`mn_str` instance.
+   :arg len: The length of ``ss`` excluding the trailing ``NUL`` character.

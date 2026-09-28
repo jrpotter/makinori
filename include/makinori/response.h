@@ -7,18 +7,12 @@ struct mn_response;
 struct mn_status mn_response_suspend(struct mn_response *const res);
 
 // =================================================================================
-// Headers
+// Header
 
 enum mn_http_code : unsigned int {
   MN_HTTP_CODE_OK = 200,
   MN_HTTP_CODE_CREATED = 201,
 };
-
-struct mn_str constexpr MN_HEADER_CONTENT_TYPE = mn_str_lit("Content-Type");
-
-struct mn_str constexpr MN_MEDIA_TYPE_CSS = mn_str_lit("text/css");
-struct mn_str constexpr MN_MEDIA_TYPE_HTML = mn_str_lit("text/html");
-struct mn_str constexpr MN_MEDIA_TYPE_JAVASCRIPT = mn_str_lit("text/javascript");
 
 struct mn_status
 mn_response_set_code(struct mn_response *const, enum mn_http_code code);

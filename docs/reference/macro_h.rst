@@ -6,59 +6,57 @@ The ``macro.h`` module contains a few generally applicable macros.
 API
 ---
 
-.. container:: api
+.. c:macro:: MN_ARR_SIZE(X)
 
-   .. c:macro:: MN_ARR_SIZE(X)
+   Returns the number of elements in an array.
 
-      Returns the number of elements in an array.
+   .. code-block:: c
 
-      .. code-block:: c
+      int arr[] = {1, 2, 3};
+      static_assert(MN_ARR_SIZE(arr) == 3);
 
-         int arr[] = {1, 2, 3};
-         static_assert(MN_ARR_SIZE(arr) == 3);
+.. c:macro:: MN_MAX(X, Y)
 
-   .. c:macro:: MN_MAX(X, Y)
+   Return the larger of ``X`` and ``Y``.
 
-      Return the larger of ``X`` and ``Y``.
+   .. code-block:: c
 
-      .. code-block:: c
+      static_assert(MN_MAX(1, 2) == 2);
 
-         static_assert(MN_MAX(1, 2) == 2);
+.. c:macro:: MN_MIN(X, Y)
 
-   .. c:macro:: MN_MIN(X, Y)
+   Return the smaller of ``X`` and ``Y``.
 
-      Return the smaller of ``X`` and ``Y``.
+   .. code-block:: c
 
-      .. code-block:: c
+      static_assert(MN_MAX(1, 2) == 1);
 
-         static_assert(MN_MAX(1, 2) == 1);
+.. c:macro:: MN_PAIR(T1, T2)
 
-   .. c:macro:: MN_PAIR(T1, T2)
+   Produces an anonymous ``struct`` corresponding to a pair of types.
 
-      Produces an anonymous ``struct`` corresponding to a pair of types.
+   .. code-block:: c
 
-      .. code-block:: c
+      struct {
+        unsigned int fst;
+        void *snd;
+      } x;
 
-         struct {
-           unsigned int fst;
-           void *snd;
-         } x;
+      MN_PAIR(unsigned int, void *) y; // Same type as `x`
 
-         MN_PAIR(unsigned int, void *) y; // Same type as `x`
+.. c:macro:: MN_STR_LEN(X)
 
-   .. c:macro:: MN_STR_LEN(X)
+   Returns the number of characters in a statically allocated string.
 
-      Returns the number of characters in a statically allocated string.
+   .. code-block:: c
 
-      .. code-block:: c
+      char const* str = "abc";
+      static_assert(MN_STR_LEN(str) == 3);
 
-         char const* str = "abc";
-         static_assert(MN_STR_LEN(str) == 3);
+.. c:macro:: MN_STR_TO(X)
 
-   .. c:macro:: MN_STR_TO(X)
+   Tokenizes the input argument, expanding arguments once before doing so.
 
-      Tokenizes the input argument, expanding arguments once before doing so.
+   .. code-block:: c
 
-      .. code-block:: c
-
-         static_assert(MN_STR_TO(__LINE__)[0] == '1');
+      static_assert(MN_STR_TO(__LINE__)[0] == '1');

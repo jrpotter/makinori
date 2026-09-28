@@ -7,121 +7,109 @@ The ``response.h`` module provides functions for interacting with
 API
 ---
 
-.. container:: api
+.. c:struct:: mn_response
 
-   .. c:struct:: mn_response
+   An opaque object representing the response to send back to the client.
 
-      An opaque object representing the response to send back to the client.
+.. c:function:: struct mn_status mn_response_suspend(struct mn_response *const res)
 
-   .. c:function:: struct mn_status mn_response_suspend(struct mn_response *const res)
+   To be invoked within an :c:type:`mn_route_handler_t`. Suspends
+   the current handler, yielding control back to the :ref:`event loop
+   <ref-concepts-event-loop>`.
 
-      To be invoked within an :c:type:`mn_route_handler_t`. Suspends
-      the current handler, yielding control back to the :ref:`event loop
-      <ref-concepts-event-loop>`.
+Header
+------
 
-   .. c:enum:: mn_http_code
+.. c:enum:: mn_http_code
 
-      An HTTP status code.
+   An HTTP status code.
 
-      .. c:member:: unsigned int MN_HTTP_CODE_OK = 200
-      .. c:member:: unsigned int MN_HTTP_CODE_CREATED = 201
+   .. c:member:: unsigned int MN_HTTP_CODE_OK = 200
+   .. c:member:: unsigned int MN_HTTP_CODE_CREATED = 201
 
-   .. c:var:: struct mn_str const MN_HEADER_CONTENT_TYPE
+.. c:function:: struct mn_status mn_response_set_code( \
+                    struct mn_response *const res, \
+                    enum mn_http_code code)
 
-      An :c:struct:`mn_str` with value ``Content-Type``.
+   Set the HTTP status code on the provided response. If not called, the
+   :c:struct:`mn_response` defaults to returning an HTTP 200 OK status.
 
-   .. c:var:: struct mn_str const MN_MEDIA_TYPE_CSS
+   :arg res: The response object to write to.
+   :arg code: The HTTP status code to write to ``res``.
 
-      An :c:struct:`mn_str` with value ``text/css``.
+   :return: | An :c:struct:`mn_status` with value:
+            | - :c:member:`MN_ERROR_NONE` on success;
+            | - :c:member:`MN_ERROR_INVALID_ARG` on an invalid ``code``;
+            | - :c:member:`MN_ERROR_IMMUTABLE` if headers are immutable;
+            | - :c:member:`MN_ERROR_DUPLICATE` if code was already set.
 
-   .. c:var:: struct mn_str const MN_MEDIA_TYPE_HTML
+.. c:function:: struct mn_status mn_response_set_header( \
+                    struct mn_response *const res, \
+                    struct mn_str header, \
+                    struct mn_str value)
 
-      An :c:struct:`mn_str` with value ``text/html``.
+   Set an HTTP header with a value.
 
-   .. c:var:: struct mn_str const MN_MEDIA_TYPE_JAVASCRIPT
+   For internal reasons, the ``Content-Type`` and ``Content-Length`` headers are
+   treated specially. Neither of these headers may be specified more than once
+   on a :c:struct:`mn_response`.
 
-      An :c:struct:`mn_str` with value ``text/javascript``.
+   :arg res: The response object to write to.
+   :arg header: The HTTP header being set.
+   :arg value: The value to assign to the ``header``.
 
-   .. c:function:: struct mn_status mn_response_set_code( \
-                       struct mn_response *const res, \
-                       enum mn_http_code code)
+   :return: | An :c:struct:`mn_status` with value:
+            | - :c:member:`MN_ERROR_NONE` on success;
+            | - :c:member:`MN_ERROR_INVALID_ARG` on an empty ``header`` or
+                ``value``;
+            | - :c:member:`MN_ERROR_IMMUTABLE` if headers are immutable;
+            | - :c:member:`MN_ERROR_DUPLICATE` if ``Content-Type`` or
+                ``Content-Length`` were already set.
 
-      Set the HTTP status code on the provided response. If not called, the
-      :c:struct:`mn_response` defaults to returning an HTTP 200 OK status.
+Body
+----
 
-      :arg res: The response object to write to.
-      :arg code: The HTTP status code to write to ``res``.
+.. c:function:: struct mn_status mn_response_write( \
+                    struct mn_response *const res, \
+                    struct mn_str const content)
 
-      :return: | An :c:struct:`mn_status` with value:
-               | - :c:member:`MN_ERROR_NONE` on success;
-               | - :c:member:`MN_ERROR_INVALID_ARG` on an invalid ``code``;
-               | - :c:member:`MN_ERROR_IMMUTABLE` if headers are immutable;
-               | - :c:member:`MN_ERROR_DUPLICATE` if code was already set.
+   Write the contents of ``output`` to the :c:struct:`mn_response`.
 
-   .. c:function:: struct mn_status mn_response_set_header( \
-                       struct mn_response *const res, \
-                       struct mn_str header, \
-                       struct mn_str value)
+   :arg res: The response object to write to.
+   :arg output: The content to append to the body.
 
-      Set an HTTP header with a value.
+   :return: | An :c:struct:`mn_status` with value:
+            | - :c:member:`MN_ERROR_NONE` on success;
+            | - :c:member:`MN_ERROR_IMMUTABLE` if the response body is
+                immutable.
 
-      For internal reasons, the ``"Content-Type"`` and ``"Content-Length"`` header
-      are treated specially. Neither of these headers may be specified more than
-      once on a :c:struct:`mn_response`.
+.. c:function:: struct mn_status mn_response_write_file( \
+                    struct mn_response *const, \
+                    struct mn_str const path)
 
-      :arg res: The response object to write to.
-      :arg header: The HTTP header being set.
-      :arg value: The value to assign to the ``header``.
+   Write the entirety of the file at ``path`` to the :c:struct:`mn_response`.
 
-      :return: | An :c:struct:`mn_status` with value:
-               | - :c:member:`MN_ERROR_NONE` on success;
-               | - :c:member:`MN_ERROR_INVALID_ARG` on an empty ``header`` or
-                   ``value``;
-               | - :c:member:`MN_ERROR_IMMUTABLE` if headers are immutable;
-               | - :c:member:`MN_ERROR_DUPLICATE` if ``Content-Type`` or
-                   ``Content-Length`` were already set.
+   :arg res: The response object to write to.
+   :arg path: The path of the file to write to the response body.
 
-   .. c:function:: struct mn_status mn_response_write( \
-                       struct mn_response *const res, \
-                       struct mn_str const content)
+   :return: | An :c:struct:`mn_status` with value:
+            | - :c:member:`MN_ERROR_NONE` on success;
+            | - :c:member:`MN_ERROR_INVALID_ARG` if a file could not be
+                found at ``path`` or the file could not be opened (e.g. is
+                a directory);
+            | - :c:member:`MN_ERROR_IMMUTABLE` if the body is immutable.
 
-      Write the contents of ``output`` to the :c:struct:`mn_response`.
+.. c:function:: struct mn_status mn_response_write_buffer( \
+                    struct mn_response *const, \
+                    char const buffer[const static 1], \
+                    size_t const len)
 
-      :arg res: The response object to write to.
-      :arg output: The content to append to the body.
+   Write the contents of ``buffer`` to the :c:struct:`mn_response`.
 
-      :return: | An :c:struct:`mn_status` with value:
-               | - :c:member:`MN_ERROR_NONE` on success;
-               | - :c:member:`MN_ERROR_IMMUTABLE` if the response body is
-                   immutable.
+   :arg res: The response object to write to.
+   :arg buffer: The content to append to the response body.
+   :arg len: The number of bytes to append to the body from ``buffer``.
 
-   .. c:function:: struct mn_status mn_response_write_file( \
-                       struct mn_response *const, \
-                       struct mn_str const path)
-
-      Write the entirety of the file at ``path`` to the :c:struct:`mn_response`.
-
-      :arg res: The response object to write to.
-      :arg path: The path of the file to write to the response body.
-
-      :return: | An :c:struct:`mn_status` with value:
-               | - :c:member:`MN_ERROR_NONE` on success;
-               | - :c:member:`MN_ERROR_INVALID_ARG` if a file could not be
-                   found at ``path`` or the file could not be opened (e.g. is
-                   a directory);
-               | - :c:member:`MN_ERROR_IMMUTABLE` if the body is immutable.
-
-   .. c:function:: struct mn_status mn_response_write_buffer( \
-                       struct mn_response *const, \
-                       char const buffer[const static 1], \
-                       size_t const len)
-
-      Write the contents of ``buffer`` to the :c:struct:`mn_response`.
-
-      :arg res: The response object to write to.
-      :arg buffer: The content to append to the response body.
-      :arg len: The number of bytes to append to the body from ``buffer``.
-
-      :return: | An :c:struct:`mn_status` with value:
-               | - :c:member:`MN_ERROR_NONE` on success;
-               | - :c:member:`MN_ERROR_IMMUTABLE` if the body is immutable.
+   :return: | An :c:struct:`mn_status` with value:
+            | - :c:member:`MN_ERROR_NONE` on success;
+            | - :c:member:`MN_ERROR_IMMUTABLE` if the body is immutable.

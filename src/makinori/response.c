@@ -38,7 +38,7 @@ struct mn_status mn_response_resume(struct mn_response *const res)
 }
 
 // =================================================================================
-// Headers
+// Header
 
 struct mn_status
 mn_response_set_code(struct mn_response *const res, enum mn_http_code code)

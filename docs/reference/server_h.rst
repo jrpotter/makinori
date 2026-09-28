@@ -7,25 +7,23 @@ The ``server.h`` module provides the entrypoint for running a
 API
 ---
 
-.. container:: api
+.. c:struct:: mn_server
 
-   .. c:struct:: mn_server
+   .. c:member:: struct mn_config config
 
-      .. c:member:: struct mn_config config
+      The runtime configuration settings needed by the :c:struct:`mn_server`.
 
-         The runtime configuration settings needed by the :c:struct:`mn_server`.
+   .. c:member:: struct mn_route route
 
-      .. c:member:: struct mn_route route
+      The head of the :c:struct:`mn_route` linked list to compare during
+      :ref:`pattern matching <ref-concepts-patterns>`.
 
-         The head of the :c:struct:`mn_route` linked list to compare during
-         :ref:`pattern matching <ref-concepts-patterns>`.
+.. c:function:: struct mn_status mn_server_run(struct mn_server s[static 1])
 
-   .. c:function:: struct mn_status mn_server_run(struct mn_server s[static 1])
+   Spawn an :ref:`event loop <ref-concepts-event-loop>` that waits
+   for new :c:struct:`mn_request` instances. Passes these, along
+   with an :c:struct:`mn_response` instance, to the user-defined
+   :c:type:`mn_route_handler_t` of an :c:struct:`mn_route` that matches the
+   request.
 
-      Spawn an :ref:`event loop <ref-concepts-event-loop>` that waits
-      for new :c:struct:`mn_request` instances. Passes these, along
-      with an :c:struct:`mn_response` instance, to the user-defined
-      :c:type:`mn_route_handler_t` of an :c:struct:`mn_route` that matches the
-      request.
-
-      :arg s: The server instance to start.
+   :arg s: The server instance to start.
