@@ -74,7 +74,7 @@ int main(int argc, char const *argv[argc])
   // setting this now behaves the same as if we were to have set it earlier.
   mn_log_set_level(config.log_level);
 
-  if (mn_str_eq(cl.action, mn_str_lit("run"))) {
+  if (mn_view_eq(cl.action.view, mn_str_lit("run").view)) {
     struct mn_server server = {.config = config, .route = route_index};
     status = mn_server_run(&server);
   } else {

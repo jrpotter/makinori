@@ -32,34 +32,14 @@ bool mn_view_ieq(struct mn_view const, struct mn_view const);
 struct mn_str {
   char const *ss;
   size_t len;
+  struct mn_view view;
 };
 
-#define mn_str_lit(X) ((struct mn_str){.ss = ("" X ""), .len = MN_STR_LEN(X)})
+#define mn_str_lit(X)                                                                  \
+  ((struct mn_str){                                                                    \
+      .ss = ("" X ""),                                                                 \
+      .len = MN_STR_LEN(X),                                                            \
+      .view = (struct mn_view){.ss_ = ("" X ""), .len = MN_STR_LEN(X)},                \
+  })
 
 struct mn_str const mn_str_ref(char const ss[static 1], size_t const len);
-
-inline struct mn_view const mn_str_to_view(struct mn_str const s)
-{
-  return (struct mn_view){.ss_ = s.ss, .len = s.len};
-}
-
-inline struct mn_view const
-mn_str_substr(struct mn_str const s, size_t const i, size_t const j)
-{
-  return mn_view_substr(mn_str_to_view(s), i, j);
-}
-
-inline size_t mn_str_cpy(char *const dst, struct mn_str src)
-{
-  return mn_view_cpy(dst, mn_str_to_view(src));
-}
-
-inline bool mn_str_eq(struct mn_str const s1, struct mn_str const s2)
-{
-  return mn_view_eq(mn_str_to_view(s1), mn_str_to_view(s2));
-}
-
-inline bool mn_str_ieq(struct mn_str const s1, struct mn_str const s2)
-{
-  return mn_view_ieq(mn_str_to_view(s1), mn_str_to_view(s2));
-}

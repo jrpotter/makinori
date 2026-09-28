@@ -11,7 +11,7 @@ handle_index(struct mn_request req, struct mn_response *const res)
 
   char buffer[MN_REQUEST_MAX_PATH_LEN] = {};
   struct mn_str prefix = mn_str_lit("docs/_build/html/");
-  mn_str_cpy(buffer, prefix);
+  mn_view_cpy(buffer, prefix.view);
   mn_view_cpy(buffer + prefix.len, req.captures[0]);
 
   return mn_response_write_file(

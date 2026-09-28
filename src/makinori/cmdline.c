@@ -7,8 +7,8 @@ static struct mn_flag *
 mn_flag_search(struct mn_view const key, struct mn_cmdline cl[static 1])
 {
   for (size_t i = 0; i < MN_CMDLINE_MAX_FLAGS && cl->flags[i]; ++i) {
-    if (mn_view_eq(key, mn_str_to_view(cl->flags[i]->lflag)) ||
-        mn_view_eq(key, mn_str_to_view(cl->flags[i]->sflag))) {
+    if (mn_view_eq(key, cl->flags[i]->lflag.view) ||
+        mn_view_eq(key, cl->flags[i]->sflag.view)) {
       return cl->flags[i];
     }
   }
@@ -24,14 +24,15 @@ struct mn_status mn_cmdline_parse(
     struct mn_str arg = mn_str_ref(argv[i], 0);
 
     if (argv[i][0] == '-') {
-      struct mn_view subarg = mn_str_substr(arg, argv[i][1] == '-' ? 2 : 1, SIZE_MAX);
+      struct mn_view subarg =
+          mn_view_substr(arg.view, argv[i][1] == '-' ? 2 : 1, SIZE_MAX);
 
       struct mn_flag *const flag = mn_flag_search(subarg, cl);
       if (flag == nullptr) {
         return MN_ERROR_EMIT(MN_ERROR_CONFIG, "Unknown flag %s", argv[i]);
       }
 
-      mn_assert(flag->arity > MN_CMDLINE_MAX_ARITY);
+      mn_assert(flag->arity <= MN_CMDLINE_MAX_ARITY);
       if (i + flag->arity >= argc) {
         return MN_ERROR_EMIT(MN_ERROR_CONFIG, "Missing values for %s", argv[i]);
       }

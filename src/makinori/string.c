@@ -79,18 +79,16 @@ bool mn_view_ieq(struct mn_view const v1, struct mn_view const v2)
 struct mn_str const mn_str_ref(char const ss[static 1], size_t const len)
 {
   size_t count = len;
+
   if (len == 0) {
     for (char const *p = ss; *p; ++p) {
       count += 1;
     }
   }
-  return (struct mn_str){.ss = ss, .len = count};
+
+  return (struct mn_str){
+      .ss = ss,
+      .len = count,
+      .view = (struct mn_view){.ss_ = ss, .len = count},
+  };
 }
-
-// --- Emit inlines ----------------------------------------------------------------
-
-struct mn_view const mn_str_to_view(struct mn_str const);
-struct mn_view const mn_str_substr(struct mn_str const, size_t const, size_t const);
-size_t mn_str_cpy(char *const, struct mn_str);
-bool mn_str_eq(struct mn_str const, struct mn_str const);
-bool mn_str_ieq(struct mn_str const, struct mn_str const);

@@ -119,15 +119,15 @@ mn_config_load_with(struct mn_str const path, struct mn_config out[const static 
     const char *lua_val = lua_tolstring(L, -1, &len);
     struct mn_str val = mn_str_ref(lua_val, len);
 
-    if (mn_str_eq(val, FLAG_LEVEL_DEBUG)) {
+    if (mn_view_eq(val.view, FLAG_LEVEL_DEBUG.view)) {
       out->log_level = MN_LOG_LEVEL_DEBUG;
-    } else if (mn_str_eq(val, FLAG_LEVEL_INFO)) {
+    } else if (mn_view_eq(val.view, FLAG_LEVEL_INFO.view)) {
       out->log_level = MN_LOG_LEVEL_INFO;
-    } else if (mn_str_eq(val, FLAG_LEVEL_NOTICE)) {
+    } else if (mn_view_eq(val.view, FLAG_LEVEL_NOTICE.view)) {
       out->log_level = MN_LOG_LEVEL_NOTICE;
-    } else if (mn_str_eq(val, FLAG_LEVEL_WARN)) {
+    } else if (mn_view_eq(val.view, FLAG_LEVEL_WARN.view)) {
       out->log_level = MN_LOG_LEVEL_WARN;
-    } else if (mn_str_eq(val, FLAG_LEVEL_ERROR)) {
+    } else if (mn_view_eq(val.view, FLAG_LEVEL_ERROR.view)) {
       out->log_level = MN_LOG_LEVEL_ERROR;
     } else {
       mn_assert(false);

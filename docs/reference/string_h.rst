@@ -124,38 +124,3 @@ Strings
       :arg ss: The C-string to point to. Must remain valid during the lifetime of
                the :c:struct:`mn_str` instance.
       :arg len: The length of ``ss`` excluding the trailing ``NUL`` character.
-
-   .. c:function:: struct mn_view const mn_str_to_view(struct mn_str const s)
-
-      Create a :c:struct:`mn_view` pointing to the same backing string as ``s``.
-
-   .. c:function:: struct mn_view const mn_str_substr( \
-                       struct mn_str const s, \
-                       size_t const i, \
-                       size_t const j)
-
-      Create a view from a string.
-
-      :arg s: The :c:struct:`mn_str` to take a view of.
-      :arg i: The starting index of the view, inclusive.
-      :arg j: The ending index of the view, exclusive.
-
-   .. c:function:: size_t mn_str_cpy(char *const dst, struct mn_str src)
-
-      Copy the contents of ``src`` into ``dst``. This does *not* terminate the
-      copy with a ``NUL`` character.
-
-      :arg dst: The buffer to copy ``src`` into.
-      :arg src: The string to copy into ``dst``.
-
-   .. c:function:: bool mn_str_eq(struct mn_str const, struct mn_str const)
-
-      Case-sensitive equality checking. Checks two :c:struct:`mn_str` instances
-      are equal, byte-per-byte.
-
-   .. c:function:: bool mn_str_ieq(struct mn_str const, struct mn_str const)
-
-      Case-insensitive equality checking. Checks two :c:struct:`mn_str`
-      instances are equal, ignoring case for ASCII characters. In other words,
-      this only works as outlined when restricting attention to just strings in
-      the BMP.
