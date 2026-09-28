@@ -19,8 +19,8 @@ OBJS         = $(patsubst %.c,%.o,$(shell find ./src -name "*.c"))
 # ==================================================================================
 # Configuration
 
-CFLAGS += -I/usr/include/lua5.4
-LDLIBS += -lwebsockets -llua5.4
+CFLAGS += -I/usr/include/lua5.5
+LDLIBS += -lwebsockets -llua5.5
 
 # ==================================================================================
 # Dependencies
