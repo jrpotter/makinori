@@ -10,6 +10,7 @@
 #include "makinori/logger.h"
 #include "makinori/request.h"
 #include "makinori/server.h"
+#include "makinori/string.h"
 #include "makinori/util.h"
 
 // =================================================================================
@@ -186,11 +187,16 @@ static struct mn_route const *const mn_route_match(
     for (int i = 0; i < result_count; ++i) {
       size_t len = 0;
       char const *capture = lua_tolstring(server->config.lua_, -1, &len);
-      struct mn_view needle = mn_view_ref(capture, len);
-      struct mn_view substr = mn_find_substr(req->path, needle);
-      mn_assert(substr.len > 0);
 
-      req->captures[result_count - i - 1] = substr;
+      if (len == 0) { // E.g. a capture of form (.*)
+        req->captures[result_count - i - 1] = mn_view_ref("", 0);
+      } else {
+        struct mn_view needle = mn_view_ref(capture, len);
+        struct mn_view substr = mn_find_substr(req->path, needle);
+        mn_assert(substr.len > 0);
+        req->captures[result_count - i - 1] = substr;
+      }
+
       lua_pop(server->config.lua_, 1);
     }
 
@@ -216,7 +222,7 @@ static struct mn_status mn_write_lws_common(
     code = r->common_code;
   }
 
-  char const *content_type = "text/html";
+  char const *content_type = "text/plain";
   if (r->common_type.len > 0) {
     content_type = r->common_type.ss;
   }

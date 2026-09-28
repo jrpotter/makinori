@@ -17,7 +17,7 @@
 #include "makinori.h"
 
 // =================================================================================
-// Routes
+// Router
 
 static struct mn_status
 handle_index(struct mn_request req, struct mn_response *const res)

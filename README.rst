@@ -13,13 +13,13 @@ You can build the examples in the ``examples`` directory using ``make``:
    $ make
    $ make bin/cmdline-usage  # To build a single example
 
-Documentation can be viewed `online`_ or built locally. For the latter, you will
-first need to install `Sphinx`_. You can then view the HTML documentation in
-``docs/_build`` after running:
+Documentation can be viewed `online`_ or generated directly. For the latter,
+first install `Sphinx`_. You can then serve the files locally by running:
 
 .. code-block:: sh
 
-   $ make docs MODE=html
+   $ make docs
+   $ docs/_build/server
 
 .. _Django: https://djangoproject.com
 .. _Ruby on Rails: https://rubyonrails.org

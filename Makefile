@@ -55,16 +55,22 @@ bin/%: examples/%.o $(OBJS)
 	mkdir -p bin
 	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
 
-docs:
+docs: MODE=html
+docs: docs/_build/server
+
+docs/_build/server: docs/main.o $(OBJS) sphinx
+	$(CC) $(filter %.o,$^) -o $@ $(LDFLAGS) $(LDLIBS)
+
+sphinx:
 	@$(SPHINXBUILD) -M $(MODE) "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 clean: MODE=clean
-clean: docs
+clean: sphinx
 	find . -name "*.d" -delete
 	find . -name "*.o" -delete
 	[ -d bin ] && rm -r bin
 
-.PHONY: all clean docs
+.PHONY: all clean docs sphinx
 
 # Include at the end to avoid interfering with default rules.
 -include $(OBJS:.o=.d)
