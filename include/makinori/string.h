@@ -13,7 +13,7 @@ struct mn_view {
   size_t len;
 };
 
-#define PRInv "%.*s"
+#define PRImnv "%.*s"
 #define mn_view_pri(X) (int){(X).len}, (X).ss_
 
 struct mn_view const mn_view_ref(char const ss[static 1], size_t const len);
@@ -21,7 +21,8 @@ struct mn_view const mn_view_ref(char const ss[static 1], size_t const len);
 struct mn_view const
 mn_view_substr(struct mn_view const v, size_t const i, size_t const j);
 
-size_t mn_view_cpy(char *const dst, struct mn_view src);
+size_t mn_view_cpy(char *const dst, struct mn_view const src);
+size_t mn_view_find(struct mn_view const haystack, struct mn_view const needle);
 
 bool mn_view_eq(struct mn_view const, struct mn_view const);
 bool mn_view_ieq(struct mn_view const, struct mn_view const);

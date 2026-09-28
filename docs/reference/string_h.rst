@@ -22,7 +22,7 @@ Views
 
          The length of the referenced portion of some string.
 
-   .. c:macro:: PRInv
+   .. c:macro:: PRImnv
 
       A utility macro for including the contents of a :c:struct:`mn_view` into a
       :c:expr:`printf` call. Should be used with :c:macro:`mn_view_pri`. For example:
@@ -30,18 +30,18 @@ Views
       .. code-block:: c
 
          struct mn_view const v = mn_view_ref("hello, world", 5);
-         printf("View: " PRInv "\n", mn_view_pri(v));
+         printf("View: " PRImnv "\n", mn_view_pri(v));
          // Outputs: View hello\n
 
    .. c:macro:: mn_view_pri(X)
 
       A utility macro for including the contents of a :c:struct:`mn_view` into a
-      :c:expr:`printf` call. Should be used with :c:macro:`PRInv`. For example:
+      :c:expr:`printf` call. Should be used with :c:macro:`PRImnv`. For example:
 
       .. code-block:: c
 
          struct mn_view const v = mn_view_ref("hello, world", 5);
-         printf("View: " PRInv "\n", mn_view_pri(v));
+         printf("View: " PRImnv "\n", mn_view_pri(v));
          // Outputs: View hello\n
 
    .. c:function:: struct mn_view const mn_view_ref( \
@@ -66,13 +66,25 @@ Views
       :arg i: The starting index of the subview, inclusive.
       :arg j: The ending index of the subview, exclusive.
 
-   .. c:function:: size_t mn_view_cpy(char *const dst, struct mn_view src)
+   .. c:function:: size_t mn_view_cpy(char *const dst, struct mn_view const src)
 
       Copy the contents of ``src`` into ``dst``. This does *not* terminate the
       copy with a ``NUL`` character.
 
       :arg dst: The buffer to copy ``src`` into.
       :arg src: The string to copy into ``dst``.
+
+   .. c:function:: size_t mn_view_find( \
+                       struct mn_view const haystack, \
+                       struct mn_view const needle)
+
+      Find the first index of ``haystack`` in which subview ``needle`` is found.
+
+      :arg haystack: The view to search the ``needle`` in.
+      :arg needle: The subview to search for.
+
+      :return: The index the ``needle`` was found starting at. If not present,
+               ``haystack.len`` is returned instead.
 
    .. c:function:: bool mn_view_eq(struct mn_view const, struct mn_view const)
 

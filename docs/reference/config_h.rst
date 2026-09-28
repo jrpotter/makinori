@@ -69,7 +69,6 @@ API
       :c:func:`mn_config_unload`.
 
       :arg path: The location of a lua file to execute.
-
       :arg out: The :c:struct:`mn_config` reference to load.
 
       :return: | An :c:struct:`mn_status` with value:

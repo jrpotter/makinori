@@ -31,12 +31,23 @@ mn_view_substr(struct mn_view const v, size_t const i, size_t const j)
   return substr;
 }
 
-size_t mn_view_cpy(char *const dst, struct mn_view src)
+size_t mn_view_cpy(char *const dst, struct mn_view const src)
 {
   for (size_t i = 0; i < src.len; ++i) {
     dst[i] = src.ss_[i];
   }
   return src.len;
+}
+
+size_t mn_view_find(struct mn_view const haystack, struct mn_view const needle)
+{
+  for (size_t i = 0; i < haystack.len - needle.len + 1; ++i) {
+    auto substr = mn_view_substr(haystack, i, i + needle.len);
+    if (mn_view_eq(substr, needle)) {
+      return i;
+    }
+  }
+  return haystack.len;
 }
 
 bool mn_view_eq(struct mn_view const v1, struct mn_view const v2)
@@ -79,13 +90,11 @@ bool mn_view_ieq(struct mn_view const v1, struct mn_view const v2)
 struct mn_str const mn_str_ref(char const ss[static 1], size_t const len)
 {
   size_t count = len;
-
   if (len == 0) {
     for (char const *p = ss; *p; ++p) {
       count += 1;
     }
   }
-
   return (struct mn_str){
       .ss = ss,
       .len = count,

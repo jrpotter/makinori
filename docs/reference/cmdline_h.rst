@@ -139,9 +139,7 @@ API
       Parses the command line.
 
       :arg argc: The ``argc`` as supplied to ``main``.
-
       :arg argv: The ``argv`` as supplied to ``main``.
-
       :arg cl: A pointer to the :c:struct:`mn_cmdline` to populate.
 
       :return: | An :c:struct:`mn_status` with value:

@@ -38,7 +38,7 @@ struct mn_status mn_response_resume(struct mn_response *const res)
 }
 
 // =================================================================================
-// API
+// Headers
 
 struct mn_status
 mn_response_set_code(struct mn_response *const res, enum mn_http_code code)
@@ -110,6 +110,9 @@ struct mn_status mn_response_set_header(
   return MN_SUCCESS;
 }
 
+// =================================================================================
+// Body
+
 struct mn_status
 mn_response_write(struct mn_response *const res, struct mn_str const content)
 {
@@ -162,6 +165,7 @@ mn_response_write_file(struct mn_response *const res, struct mn_str const path)
       } else {
         status = MN_FAILURE(MN_ERROR_SYSTEM);
       }
+      goto cleanup;
     }
 
     if (n == 0) {

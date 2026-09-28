@@ -9,13 +9,6 @@ API
 
 .. container:: api
 
-   .. c:enum:: mn_http_code
-
-      An HTTP status code.
-
-      .. c:member:: unsigned int MN_HTTP_CODE_OK = 200
-      .. c:member:: unsigned int MN_HTTP_CODE_CREATED = 201
-
    .. c:struct:: mn_response
 
       An opaque object representing the response to send back to the client.
@@ -26,6 +19,29 @@ API
       the current handler, yielding control back to the :ref:`event loop
       <ref-concepts-event-loop>`.
 
+   .. c:enum:: mn_http_code
+
+      An HTTP status code.
+
+      .. c:member:: unsigned int MN_HTTP_CODE_OK = 200
+      .. c:member:: unsigned int MN_HTTP_CODE_CREATED = 201
+
+   .. c:var:: struct mn_str const MN_HEADER_CONTENT_TYPE
+
+      An :c:struct:`mn_str` with value ``Content-Type``.
+
+   .. c:var:: struct mn_str const MN_MEDIA_TYPE_CSS
+
+      An :c:struct:`mn_str` with value ``text/css``.
+
+   .. c:var:: struct mn_str const MN_MEDIA_TYPE_HTML
+
+      An :c:struct:`mn_str` with value ``text/html``.
+
+   .. c:var:: struct mn_str const MN_MEDIA_TYPE_JAVASCRIPT
+
+      An :c:struct:`mn_str` with value ``text/javascript``.
+
    .. c:function:: struct mn_status mn_response_set_code( \
                        struct mn_response *const res, \
                        enum mn_http_code code)
@@ -34,7 +50,6 @@ API
       :c:struct:`mn_response` defaults to returning an HTTP 200 OK status.
 
       :arg res: The response object to write to.
-
       :arg code: The HTTP status code to write to ``res``.
 
       :return: | An :c:struct:`mn_status` with value:
@@ -55,9 +70,7 @@ API
       once on a :c:struct:`mn_response`.
 
       :arg res: The response object to write to.
-
       :arg header: The HTTP header being set.
-
       :arg value: The value to assign to the ``header``.
 
       :return: | An :c:struct:`mn_status` with value:
@@ -75,7 +88,6 @@ API
       Write the contents of ``output`` to the :c:struct:`mn_response`.
 
       :arg res: The response object to write to.
-
       :arg output: The content to append to the body.
 
       :return: | An :c:struct:`mn_status` with value:
@@ -90,7 +102,6 @@ API
       Write the entirety of the file at ``path`` to the :c:struct:`mn_response`.
 
       :arg res: The response object to write to.
-
       :arg path: The path of the file to write to the response body.
 
       :return: | An :c:struct:`mn_status` with value:
@@ -108,9 +119,7 @@ API
       Write the contents of ``buffer`` to the :c:struct:`mn_response`.
 
       :arg res: The response object to write to.
-
       :arg buffer: The content to append to the response body.
-
       :arg len: The number of bytes to append to the body from ``buffer``.
 
       :return: | An :c:struct:`mn_status` with value:
