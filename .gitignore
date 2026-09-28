@@ -1,7 +1,7 @@
-.cache/
-.DS_Store
 **/*.d
 **/*.o
+.DS_Store
+.cache/
 bin/
 compile_commands.json
-docs/build
+docs/_build

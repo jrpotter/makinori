@@ -1,14 +1,20 @@
 # ==================================================================================
 # General
 
-CC = clang
-CFLAGS = -Wall -Werror -std=c23 -Iinclude
-CPPFLAGS = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=202405L -D_GNU_SOURCE
-LDFLAGS =
-LDLIBS =
+CC           = clang
+CFLAGS       = -Wall -Werror -std=c23 -Iinclude
+CPPFLAGS     = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=202405L -D_GNU_SOURCE
+LDFLAGS      =
+LDLIBS       =
+
+SPHINXOPTS  ?=
+SPHINXBUILD ?= sphinx-build
+SOURCEDIR    = docs
+BUILDDIR     = docs/_build
+MODE        ?= help
 
 # shell/find searches arbitrarily deep unlike wildcard.
-OBJS = $(patsubst %.c,%.o,$(shell find ./src -name "*.c"))
+OBJS         = $(patsubst %.c,%.o,$(shell find ./src -name "*.c"))
 
 # ==================================================================================
 # Configuration
@@ -16,16 +22,12 @@ OBJS = $(patsubst %.c,%.o,$(shell find ./src -name "*.c"))
 CFLAGS += -I/usr/include/lua5.4
 LDLIBS += -lwebsockets -llua5.4
 
-# CPPFLAGS += -D_MN_REQUEST_MAX_PATH_LEN=2048
-# CPPFLAGS += -D_MN_REQUEST_MAX_CAPTURES=16
-# CPPFLAGS += -D_MN_REQUEST_MAX_QUERY_PARAMS=16
-
 # ==================================================================================
 # Dependencies
 
-# Automatically track dependencies. The -MMD flag creates a .d file with object
-# file dependencies at build time. We then -include any definition files that
-# are generated on subsequent builds.
+# Automatically track dependencies. The -MMD flag creates a .d file with
+# object file dependencies at build time. We then -include (at the bottom) any
+# definition files that are generated on subsequent builds.
 CFLAGS += -MMD
 
 # ==================================================================================
@@ -38,7 +40,7 @@ CFLAGS += -fstack-clash-protection
 
 ifeq ($(BUILD_TYPE),Debug)
 	CFLAGS += -g -O0
-else
+else ifeq ($(BUILD_TYPE),Release)
 	CFLAGS += -O2
 	CPPFLAGS += -DNDEBUG
 	LDFLAGS += -s
@@ -47,18 +49,22 @@ endif
 # ==================================================================================
 # Recipes
 
-.PHONY: clean
-
 all: bin/cmdline-usage
 
 bin/%: examples/%.o $(OBJS)
 	mkdir -p bin
 	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
 
-clean:
+docs:
+	@$(SPHINXBUILD) -M $(MODE) "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+clean: MODE=clean
+clean: docs
 	find . -name "*.d" -delete
 	find . -name "*.o" -delete
-	-rm -r bin
+	[ -d bin ] && rm -r bin
+
+.PHONY: all clean docs
 
 # Include at the end to avoid interfering with default rules.
 -include $(OBJS:.o=.d)
