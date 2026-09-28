@@ -10,4 +10,4 @@ EVENT_LOOP = 'poll'
 LOG_LEVEL = 'debug'
 
 -- The port the server binds to and serves HTTP requests on.
-PORT = 8000
+PORT = 1314

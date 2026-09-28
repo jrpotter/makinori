@@ -5,7 +5,7 @@
  * $ make bin/cmdline-usage
  * $ ./cmdline-usage -h
  * $ ./cmdline-usage run
- * $ curl localhost:8000
+ * $ curl localhost:1314
  * ```
  */
 #include <stdio.h>

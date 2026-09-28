@@ -24,7 +24,7 @@ Minimal Example
 ---------------
 
 Test your build against the following minimal ``main.c`` example. Once running,
-send an HTTP GET request to ``localhost:8000``. You will receive an HTTP 200 OK
+send an HTTP GET request to ``localhost:1314``. You will receive an HTTP 200 OK
 response with body ``Hello, world``.
 
 .. code-block:: c

@@ -5,10 +5,13 @@
 // =================================================================================
 // Router
 
+static struct mn_str constexpr PREFIX = mn_str_lit("docs/_build/html/");
+
 static struct mn_str constexpr CSS_EXT = mn_str_lit(".css");
 static struct mn_str constexpr HTML_EXT = mn_str_lit(".html");
+static struct mn_str constexpr ICO_EXT = mn_str_lit(".ico");
 static struct mn_str constexpr JS_EXT = mn_str_lit(".js");
-static struct mn_str constexpr PREFIX = mn_str_lit("docs/_build/html/");
+static struct mn_str constexpr PNG_EXT = mn_str_lit(".png");
 
 static struct mn_status handle_dir(struct mn_request req, struct mn_response *const res)
 {
@@ -22,9 +25,9 @@ static struct mn_status handle_dir(struct mn_request req, struct mn_response *co
 
   MN_PAIR(struct mn_str, struct mn_str)
   media[] = {
-      {CSS_EXT, MN_MEDIA_TYPE_CSS},
-      {HTML_EXT, MN_MEDIA_TYPE_HTML},
-      {JS_EXT, MN_MEDIA_TYPE_JAVASCRIPT},
+      {CSS_EXT, MN_MEDIA_TYPE_CSS}, {HTML_EXT, MN_MEDIA_TYPE_HTML},
+      {ICO_EXT, MN_MEDIA_TYPE_ICO}, {JS_EXT, MN_MEDIA_TYPE_JAVASCRIPT},
+      {PNG_EXT, MN_MEDIA_TYPE_PNG},
   };
 
   for (size_t i = 0; i < MN_ARR_SIZE(media); ++i) {

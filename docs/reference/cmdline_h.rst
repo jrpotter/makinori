@@ -14,7 +14,7 @@ As an example, the following command has action ``run`` and flags ``--port`` and
 
 .. code-block:: sh
 
-   $ ./server --port 8000 run -c config.lua
+   $ ./server --port 1314 run -c config.lua
 
 Here is a full example to demonstrate usage.
 

@@ -741,7 +741,7 @@ struct mn_status mn_server_run(struct mn_server s[static 1])
 
   // The inclusion (or lack thereof) of a trailing / in the request path
   // yields two different paths. The only exception is at root. For example,
-  // localhost:8000 and localhost:8000/ both have path /.
+  // localhost:1314 and localhost:1314/ both have path /.
   struct lws_http_mount const http_mount = {
       .protocol = "http",
       .mountpoint = "",
