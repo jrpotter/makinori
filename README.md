@@ -12,24 +12,24 @@ footprint.
 
 ## Quickstart
 
-You can get a sense for how the project works by perusing the examples in the
-``examples`` directory. Build the examples by running:
+Building **makinori** requires the following:
+
+1. [git](https://git-scm.com/),
+1. [make](https://www.gnu.org/software/make/), and
+1. [CMake](https://cmake.org/).
+
+Optionally, if interested in building documentation locally, you should install
+[Sphinx](https://www.sphinx-doc.org/en/master/). You can now clone the project
+and build each of the examples:
 
 ```sh
-$ make                     # Build all of the examples
-$ make bin/cmdline-usage   # Build a single example
+$ git clone --recurse-submodules https://github.com/jrpotter/makinori.git
+$ make
+$ make docs  # Optional
 ```
 
-## Documentation
-
-Documentation can be viewed [online](https://makinori.dev) or generated locally.
-To do the latter, first install [Sphinx](https://www.sphinx-doc.org/en/master/).
-Then run the following:
-
-```sh
-$ make docs
-$ docs/_build/server  # Also runs makinori!
-```
+You will find each generated executable under the newly created ``bin``
+directory.
 
 ## In The Wild
 

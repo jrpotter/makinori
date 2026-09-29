@@ -1,26 +1,24 @@
 # ==================================================================================
 # General
 
-CC           = clang
-CFLAGS       = -Wall -Werror -std=c23 -Iinclude
-CPPFLAGS     = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=202405L -D_GNU_SOURCE
-LDFLAGS      =
-LDLIBS       =
+LUA_DIR     := lib/lua
+LWS_DIR     := lib/libwebsockets
 
-SPHINXOPTS  ?=
-SPHINXBUILD ?= sphinx-build
-SOURCEDIR    = docs
-BUILDDIR     = docs/_build
-MODE        ?= help
+CC          := clang
+CFLAGS      := -Wall -Werror -std=c23 -Iinclude -Ilib/lua
+CPPFLAGS    := -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=202405L -D_GNU_SOURCE
+LDFLAGS     := -L$(LUA_DIR) -L$(LWS_DIR)/build/lib
+LDLIBS      := -lm -llua -lwebsockets
 
-# shell/find searches arbitrarily deep unlike wildcard.
-OBJS         = $(patsubst %.c,%.o,$(shell find ./src -name "*.c"))
+BUILD_TYPE  ?= Debug
 
-# ==================================================================================
-# Configuration
-
-CFLAGS += -I/usr/include/lua5.5
-LDLIBS += -lwebsockets -llua5.5
+ifeq ($(BUILD_TYPE),Debug)
+	CFLAGS += -g -O0
+else ifeq ($(BUILD_TYPE),Release)
+	CFLAGS += -O2
+	CPPFLAGS += -DNDEBUG
+	LDFLAGS += -s
+endif
 
 # ==================================================================================
 # Dependencies
@@ -38,22 +36,56 @@ CFLAGS += -MMD
 # guard page setup on our coroutine stacks.
 CFLAGS += -fstack-clash-protection
 
-ifeq ($(BUILD_TYPE),Debug)
-	CFLAGS += -g -O0
-else ifeq ($(BUILD_TYPE),Release)
-	CFLAGS += -O2
-	CPPFLAGS += -DNDEBUG
-	LDFLAGS += -s
-endif
-
 # ==================================================================================
-# Recipes
+# makinori
+
+# shell/find searches arbitrarily deep unlike wildcard.
+OBJS         = $(patsubst %.c,%.o,$(shell find ./src -name "*.c"))
+
+.PHONY: all clean docs lua lws sphinx
 
 all: bin/cmdline-usage
 
-bin/%: examples/%.o $(OBJS)
+bin/%: examples/%.o $(OBJS) lua lws
 	mkdir -p bin
-	$(CC) $^ -o $@ $(LDFLAGS) $(LDLIBS)
+	$(CC) $(filter %.o,$^) -o $@ $(LDFLAGS) $(LDLIBS)
+
+# Include at the end to avoid interfering with default rules.
+-include $(OBJS:.o=.d)
+
+clean: MODE=clean
+clean: sphinx
+	cd $(LUA_DIR) && $(MAKE) clean
+	if [ -d $(LWS_DIR)/build ]; then rm -r $(LWS_DIR)/build; fi
+	find . -name "*.d" -delete
+	find . -name "*.o" -delete
+	if [ -d bin ]; then rm -r bin; fi
+
+# ==================================================================================
+# Dependencies
+
+lua: export CC=clang
+lua: export CWARNGCC=
+lua:
+	cd $(LUA_DIR) && $(MAKE) -e liblua.a
+
+lws:
+	cd $(LWS_DIR) && cmake \
+		-G 'Unix Makefiles' \
+		-DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
+		-DLWS_WITH_MINIMAL_EXAMPLES=OFF \
+		-DLWS_WITH_SSL=OFF \
+		-B build
+	cd $(LWS_DIR)/build && $(MAKE)
+
+# ==================================================================================
+# Documentation
+
+SPHINXOPTS  ?=
+SPHINXBUILD ?= sphinx-build
+SOURCEDIR    = docs
+BUILDDIR     = docs/_build
+MODE        ?= help
 
 docs: MODE=html
 docs: docs/_build/server
@@ -63,14 +95,3 @@ docs/_build/server: docs/main.o $(OBJS) sphinx
 
 sphinx:
 	@$(SPHINXBUILD) -M $(MODE) "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-
-clean: MODE=clean
-clean: sphinx
-	find . -name "*.d" -delete
-	find . -name "*.o" -delete
-	[ -d bin ] && rm -r bin
-
-.PHONY: all clean docs sphinx
-
-# Include at the end to avoid interfering with default rules.
--include $(OBJS:.o=.d)

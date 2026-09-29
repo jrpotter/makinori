@@ -81,12 +81,11 @@ In the snippet above, paths of incoming requests have to equal a route's
 * ``....?`` matches any sequence of three or four characters.
 
 In fact, Lua's `pattern matching`_ mechanism is used directly, so any pattern
-supported by Lua is suitable for use. Keep in mind, the version of Lua used
-during compilation may dictate what patterns are available to you. Also note
-that the ``/`` character found in URIs has no special status. This means a
-pattern like ``/.*`` will match every route.
+supported by Lua is suitable for use. Also note that the ``/`` character found
+in URIs has no special status. This means a pattern like ``/.*`` will match
+every route.
 
-.. _pattern matching: https://www.lua.org/manual/5.1/manual.html#5.4.1
+.. _pattern matching: https://www.lua.org/manual/5.5/manual.html#6.5.1
 
 .. note::
 
