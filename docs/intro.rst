@@ -1,26 +1,29 @@
 Getting Started
 ===============
 
-Build
------
+Prerequisites
+-------------
 
 We only support building **makinori** from source. To do so, first make sure
 the following prerequisites are installed:
 
-1. `git <https://git-scm.com/>`__
-1. `make <https://www.gnu.org/software/make/>`__
-1. `CMake <https://cmake.org/>`__
+1. `git <https://git-scm.com/>`__ to clone the **makinori** repository,
+2. `make <https://www.gnu.org/software/make/>`__ to build **makinori**, and
+3. `CMake <https://cmake.org/>`__ to build the ``libwebsockets`` submodule.
 
-You can then clone the repository and build all of the examples by running:
+Build
+-----
+
+You can now clone the repository and build all of the examples by running:
 
 .. code-block:: sh
 
-   $ git clone --recursive-submodules https://github.com/jrpotter/makinori.git
+   $ git clone --recurse-submodules https://github.com/jrpotter/makinori.git
    $ make [BUILD_TYPE=Debug|Release]
 
 You will find the build artifacts under the newly created ``build`` directory.
-A copy of the `lua <https://www.lua.org>` (v5.5.1) and `libwebsockets
-<https://libwebsockets.org/>` (v4.5) static libraries are included for
+A copy of the `lua <https://www.lua.org>`__ (v5.5.1) and `libwebsockets
+<https://libwebsockets.org/>`__ (v4.5) static libraries are included for
 convenience.
 
 Minimal Example
