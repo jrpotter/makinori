@@ -1,16 +1,19 @@
 # ==================================================================================
 # General
 
-LUA_DIR     := lib/lua
-LWS_DIR     := lib/libwebsockets
+LUA_SRC    := lib/lua
+LWS_SRC    := lib/libwebsockets
 
-CC          := clang
-CFLAGS      := -Wall -Werror -std=c23 -Iinclude -Ilib/lua
-CPPFLAGS    := -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=202405L -D_GNU_SOURCE
-LDFLAGS     := -L$(LUA_DIR) -L$(LWS_DIR)/build/lib
-LDLIBS      := -lm -llua -lwebsockets
+AR         := ar
+CC         := clang
+CFLAGS     := -Wall -Werror -std=c23 -Iinclude
+CPPFLAGS   := -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=202405L -D_GNU_SOURCE
+LDFLAGS    :=
+LDLIBS     := -lm
 
-BUILD_TYPE  ?= Debug
+BUILD_BIN  ?= build/bin
+BUILD_LIB  ?= build/lib
+BUILD_TYPE ?= Debug
 
 ifeq ($(BUILD_TYPE),Debug)
 	CFLAGS += -g -O0
@@ -39,44 +42,90 @@ CFLAGS += -fstack-clash-protection
 # ==================================================================================
 # makinori
 
-# shell/find searches arbitrarily deep unlike wildcard.
-OBJS         = $(patsubst %.c,%.o,$(shell find ./src -name "*.c"))
+.PHONY: all bin clean docs lib sphinx
 
-.PHONY: all clean docs lua lws sphinx
+MAKINORI := $(BUILD_LIB)/libmakinori.a
+LUA      := $(BUILD_LIB)/liblua.a
+LWS      := $(BUILD_LIB)/libwebsockets.a
 
-all: bin/cmdline-usage
+all: bin lib
+bin: $(patsubst examples/%.c,$(BUILD_BIN)/%,$(wildcard examples/*.c))
+lib: $(MAKINORI) $(LUA) $(LWS)
 
-bin/%: examples/%.o $(OBJS) lua lws
-	mkdir -p bin
+$(BUILD_BIN)/%: LDFLAGS += -L$(BUILD_LIB)
+$(BUILD_BIN)/%: LDLIBS += -lmakinori -llua -lwebsockets
+$(BUILD_BIN)/%: examples/%.o lib
+	mkdir -p build/bin
 	$(CC) $(filter %.o,$^) -o $@ $(LDFLAGS) $(LDLIBS)
-
-# Include at the end to avoid interfering with default rules.
--include $(OBJS:.o=.d)
 
 clean: MODE=clean
 clean: sphinx
-	cd $(LUA_DIR) && $(MAKE) clean
-	if [ -d $(LWS_DIR)/build ]; then rm -r $(LWS_DIR)/build; fi
 	find . -name "*.d" -delete
 	find . -name "*.o" -delete
-	if [ -d bin ]; then rm -r bin; fi
+	if [ -d build ]; then rm -r build; fi
+	cd $(LUA_SRC) && $(MAKE) clean
+	if [ -d $(LWS_SRC)/build ]; then rm -r $(LWS_SRC)/build; fi
 
 # ==================================================================================
-# Dependencies
+# Libraries
 
-lua: export CC=clang
-lua: export CWARNGCC=
-lua:
-	cd $(LUA_DIR) && $(MAKE) -e liblua.a
+$(LUA): export CC=clang
+$(LUA): export CWARNGCC=
+$(LUA):
+	cd $(LUA_SRC) && $(MAKE) -e liblua.a
+	mkdir -p build/lib
+	cp $(LUA_SRC)/liblua.a $@
 
-lws:
-	cd $(LWS_DIR) && cmake \
+$(LWS):
+	cd $(LWS_SRC) && cmake \
 		-G 'Unix Makefiles' \
-		-DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_C_COMPILER=$(CC) \
+		-DLWS_CLIENT_HTTP_PROXYING=OFF \
+		-DLWS_CTEST_INTERNET_AVAILABLE=OFF \
+		-DLWS_WITHOUT_BUILTIN_SHA1=ON \
+		-DLWS_WITHOUT_CLIENT=ON \
+		-DLWS_WITHOUT_TESTAPPS=ON \
+		-DLWS_WITHOUT_TEST_CLIENT=ON \
+		-DLWS_WITHOUT_TEST_PING=ON \
+		-DLWS_WITHOUT_TEST_SERVER=ON \
+		-DLWS_WITHOUT_TEST_SERVER_EXTPOLL=ON \
+		-DLWS_WITH_DIR=ON \
+		-DLWS_WITH_DLO=OFF \
+		-DLWS_WITH_FILE_OPS=OFF \
+		-DLWS_WITH_GZINFLATE=OFF \
+		-DLWS_WITH_HTTP_BASIC_AUTH=OFF \
+		-DLWS_WITH_HTTP_DIGEST_AUTH=OFF \
+		-DLWS_WITH_JPEG=OFF \
+		-DLWS_WITH_JSONRPC=OFF \
+		-DLWS_WITH_LEJP=OFF \
+		-DLWS_WITH_LEJP_CONF=ON \
+		-DLWS_WITH_LHP=OFF \
+		-DLWS_WITH_LIBCAP=OFF \
 		-DLWS_WITH_MINIMAL_EXAMPLES=OFF \
+		-DLWS_WITH_SECURE_STREAMS=OFF \
+		-DLWS_WITH_SHARED=OFF \
 		-DLWS_WITH_SSL=OFF \
+		-DLWS_WITH_SYS_SMD=OFF \
+		-DLWS_WITH_SYS_STATE=OFF \
+		-DLWS_WITH_UPNG=OFF \
 		-B build
-	cd $(LWS_DIR)/build && $(MAKE)
+	cd $(LWS_SRC)/build && $(MAKE)
+	mkdir -p build/lib
+	cp $(LWS_SRC)/build/lib/libwebsockets.a $@
+
+OBJS := $(patsubst %.c,%.o,$(shell find ./src -name "*.c"))
+
+$(MAKINORI): $(OBJS)
+	mkdir -p $(BUILD_LIB)
+	$(AR) rcs $@ $(OBJS)
+
+$(OBJS): CFLAGS += -I$(LUA_SRC) -I$(LWS_SRC)/build/include
+$(OBJS): %.o: %.c $(LUA) $(LWS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
+
+# Include at the end to avoid interfering with other rules.
+-include $(OBJS:.o=.d)
 
 # ==================================================================================
 # Documentation
@@ -87,11 +136,12 @@ SOURCEDIR    = docs
 BUILDDIR     = docs/_build
 MODE        ?= help
 
-docs: MODE=html
-docs: docs/_build/server
+docs: $(BUILD_BIN)/docs
 
-docs/_build/server: docs/main.o $(OBJS) sphinx
-	$(CC) $(filter %.o,$^) -o $@ $(LDFLAGS) $(LDLIBS)
+$(BUILD_BIN)/docs: MODE=html
+$(BUILD_BIN)/docs: docs/main.o lib sphinx
+	mkdir -p $(BUILD_BIN)
+	$(CC) $< -o $@ $(LDFLAGS) $(LDLIBS)
 
 sphinx:
 	@$(SPHINXBUILD) -M $(MODE) "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)

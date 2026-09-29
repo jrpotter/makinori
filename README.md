@@ -28,8 +28,12 @@ $ make
 $ make docs  # Optional
 ```
 
-You will find each generated executable under the newly created ``bin``
-directory.
+You will find each generated build artifact under the newly created ``build``
+directory. If you built the documentation files, serve them with:
+
+```sh
+$ build/bin/docs
+```
 
 ## In The Wild
 

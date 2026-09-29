@@ -18,9 +18,10 @@ You can then clone the repository and build all of the examples by running:
    $ git clone --recursive-submodules https://github.com/jrpotter/makinori.git
    $ make [BUILD_TYPE=Debug|Release]
 
-You will find each generated executable under the newly created ``bin``
-directory. This automatically bundles `lua <https://www.lua.org>` v5.5.1 and
-`libwebsockets <https://libwebsockets.org/>` v4.5.
+You will find the build artifacts under the newly created ``build`` directory.
+A copy of the `lua <https://www.lua.org>` (v5.5.1) and `libwebsockets
+<https://libwebsockets.org/>` (v4.5) static libraries are included for
+convenience.
 
 Minimal Example
 ---------------

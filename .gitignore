@@ -2,6 +2,6 @@
 **/*.o
 .DS_Store
 .cache/
-bin/
+build/
 compile_commands.json
 docs/_build

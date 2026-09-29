@@ -1,5 +1,7 @@
 #pragma once
 
+#include <errno.h>
+
 #include "makinori/macro.h"
 
 #ifndef MN_TRACE_LWS_CALLBACK
