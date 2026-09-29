@@ -1,0 +1,6 @@
+[submodule "lib/lua"]
+	path = lib/lua
+	url = https://github.com/lua/lua.git
+[submodule "lib/libwebsockets"]
+	path = lib/libwebsockets
+	url = https://github.com/warmcat/libwebsockets.git
