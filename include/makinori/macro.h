@@ -2,9 +2,19 @@
 
 #define MN_ARR_SIZE(X) (sizeof(X) / sizeof(X[0]))
 
-#define MN_MAX(X, Y) ((X) > (Y) ? (X) : (Y))
+#define MN_MAX(X, Y)                                                                   \
+  ({                                                                                   \
+    auto e1 = (X);                                                                     \
+    auto e2 = (Y);                                                                     \
+    e1 > e2 ? e1 : e2;                                                                 \
+  })
 
-#define MN_MIN(X, Y) ((X) < (Y) ? (X) : (Y))
+#define MN_MIN(X, Y)                                                                   \
+  ({                                                                                   \
+    auto e1 = (X);                                                                     \
+    auto e2 = (Y);                                                                     \
+    e1 < e2 ? e1 : e2;                                                                 \
+  })
 
 #define MN_PAIR(T1, T2)                                                                \
   struct {                                                                             \

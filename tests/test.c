@@ -2,6 +2,7 @@
 
 #include "makinori/test_cmdline.c"
 #include "makinori/test_config.c"
+#include "makinori/test_macro.c"
 #include "makinori/test_string.c"
 #include "test.h"
 
