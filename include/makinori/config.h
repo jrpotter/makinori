@@ -2,11 +2,33 @@
 
 #include "makinori/util.h"
 
-typedef struct lua_State mn_lua_t;
+#ifndef MN_CMDLINE_MAX_FLAGS
+#define MN_CMDLINE_MAX_FLAGS 16
+#endif
 
-enum mn_event_loop : unsigned int {
-  MN_EVENT_LOOP_POLL,
-};
+#ifndef MN_CMDLINE_MAX_ARITY
+#define MN_CMDLINE_MAX_ARITY 8
+#endif
+
+#ifndef MN_REQUEST_MAX_PATH_LEN
+#define MN_REQUEST_MAX_PATH_LEN 2048
+#endif
+
+#ifndef MN_REQUEST_MAX_CAPTURES
+#define MN_REQUEST_MAX_CAPTURES 24
+#endif
+
+#ifndef MN_REQUEST_MAX_QUERY_PARAMS
+#define MN_REQUEST_MAX_QUERY_PARAMS 32
+#endif
+
+static_assert(MN_CMDLINE_MAX_FLAGS >= 1);
+static_assert(MN_CMDLINE_MAX_ARITY >= 1);
+static_assert(MN_REQUEST_MAX_PATH_LEN >= 256);
+static_assert(MN_REQUEST_MAX_CAPTURES >= 1);
+static_assert(MN_REQUEST_MAX_QUERY_PARAMS >= 1);
+
+typedef struct lua_State mn_lua_t;
 
 struct mn_config {
   unsigned long long coro_pages; // COROUTINE_PAGES

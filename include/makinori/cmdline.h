@@ -1,14 +1,6 @@
 #pragma once
 
-#include "makinori/util.h"
-
-#ifndef MN_CMDLINE_MAX_FLAGS
-#define MN_CMDLINE_MAX_FLAGS 16
-#endif
-
-#ifndef MN_CMDLINE_MAX_ARITY
-#define MN_CMDLINE_MAX_ARITY 8
-#endif
+#include "makinori/config.h"
 
 struct mn_flag {
   struct mn_str sflag;

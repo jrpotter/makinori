@@ -4,45 +4,6 @@ request.h
 The ``request.h`` module provides functions for interacting with
 :c:struct:`mn_request` objects. Learn more at :ref:`ref-concepts-requests`.
 
-Options
--------
-
-.. c:macro:: MN_REQUEST_MAX_PATH_LEN
-
-   Defaults to 2048. The maximum supported length of any incoming URI including
-   a trailing ``NUL`` terminator. Requests with longer URIs automatically
-   receive an HTTP 414 URI Too Long response. To update, define *before*
-   including **makinori**:
-
-   .. code-block:: c
-
-      #define MN_REQUEST_MAX_PATH_LEN 4096
-      #include "makinori.h"
-
-.. c:macro:: MN_REQUEST_MAX_CAPTURES
-
-   Defaults to 16. The maximum number of :ref:`captures <ref-concepts-captures>`
-   permitted in any route. Clients using a route with more captures than
-   this value permits will automatically receive an HTTP 501 Not Implemented
-   response. To update, define *before* include **makinori**:
-
-   .. code-block:: c
-
-      #define MN_REQUEST_MAX_CAPTURES 32
-      #include "makinori.h"
-
-.. c:macro:: MN_REQUEST_MAX_QUERY_PARAMS
-
-   Defaults to 24. The maximum number of query parameters permitted in any
-   route. Clients specifying more query parameters than this value permits will
-   automatically receive an HTTP 501 Not Implemented response. To update, define
-   *before* include **makinori**:
-
-   .. code-block:: c
-
-      #define MN_REQUEST_MAX_QUERY_PARAMS 48
-      #include "makinori.h"
-
 API
 ---
 

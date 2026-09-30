@@ -5,6 +5,38 @@ The ``config.h`` module represents runtime configuration options as outlined in
 :doc:`../config`. Refer to that document for more details on what each option
 means.
 
+.. _ref-config_h-build-options:
+
+Build Options
+-------------
+
+.. c:macro:: MN_CMDLINE_MAX_FLAGS
+
+   Defaults to ``16``. The maximum number of flags that can be parsed.
+
+.. c:macro:: MN_CMDLINE_MAX_ARITY
+
+   Defaults to ``8``. The maximum number of values any one flag can have.
+
+.. c:macro:: MN_REQUEST_MAX_PATH_LEN
+
+   Defaults to ``2048``. The maximum supported length of any incoming
+   URI including a trailing ``NUL`` terminator. Requests with longer URIs
+   automatically receive an HTTP 414 URI Too Long response.
+
+.. c:macro:: MN_REQUEST_MAX_CAPTURES
+
+   Defaults to ``16``. The maximum number of :ref:`captures
+   <ref-concepts-captures>` permitted in any route. Clients using a route with
+   more captures than this value permits will automatically receive an HTTP 501
+   Not Implemented response.
+
+.. c:macro:: MN_REQUEST_MAX_QUERY_PARAMS
+
+   Defaults to ``24``. The maximum number of query parameters permitted in any
+   route. Clients specifying more query parameters than this value permits will
+   automatically receive an HTTP 501 Not Implemented response.
+
 API
 ---
 

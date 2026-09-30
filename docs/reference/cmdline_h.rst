@@ -60,29 +60,6 @@ Here is a full example to demonstrate usage.
      return EXIT_SUCCESS;
    }
 
-Options
--------
-
-.. c:macro:: MN_CMDLINE_MAX_FLAGS
-
-   Defaults to 16. The maximum number of flags that can be parsed. To update,
-   define *before* including **makinori**:
-
-   .. code-block:: c
-
-      #define MN_CMDLINE_MAX_FLAGS 32
-      #include "makinori.h"
-
-.. c:macro:: MN_CMDLINE_MAX_ARITY
-
-   Defaults to 8. The maximum number of values any one flag can have. To
-   update, define *before* including **makinori**:
-
-   .. code-block:: c
-
-      #define MN_CMDLINE_MAX_ARITY 16
-      #include "makinori.h"
-
 API
 ---
 
@@ -108,7 +85,7 @@ API
       Whether the flag was set. Mostly useful in the case of a flag with
       :c:enum:`mn_flag_arity` zero.
 
-   .. c:member:: struct mn_str vals[MN_FLAG_ARITY_MAX]
+   .. c:member:: struct mn_str vals[MN_CMDLINE_MAX_ARITY]
 
       The values following the flag. After a call to :c:func:`mn_cmdline_parse`,
       :c:expr:`vals[0]` will contain the first value, :c:expr:`vals[1]` contains

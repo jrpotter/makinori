@@ -1,25 +1,7 @@
 #pragma once
 
+#include "makinori/config.h"
 #include "makinori/response.h"
-#include "makinori/string.h"
-
-#ifndef MN_REQUEST_MAX_PATH_LEN
-#define MN_REQUEST_MAX_PATH_LEN 2048
-#endif
-
-static_assert(MN_REQUEST_MAX_PATH_LEN >= 256);
-
-#ifndef MN_REQUEST_MAX_CAPTURES
-#define MN_REQUEST_MAX_CAPTURES 24
-#endif
-
-static_assert(MN_REQUEST_MAX_CAPTURES >= 0);
-
-#ifndef MN_REQUEST_MAX_QUERY_PARAMS
-#define MN_REQUEST_MAX_QUERY_PARAMS 32
-#endif
-
-static_assert(MN_REQUEST_MAX_QUERY_PARAMS >= 0);
 
 enum mn_method : unsigned int {
   MN_METHOD_GET = 0,
