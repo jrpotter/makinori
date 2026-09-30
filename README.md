@@ -26,6 +26,7 @@ and build each of the examples:
 $ git clone --recurse-submodules https://github.com/jrpotter/makinori.git
 $ make
 $ make docs  # Optional
+$ make test  # Optional
 ```
 
 You will find each generated build artifact under the newly created ``build``

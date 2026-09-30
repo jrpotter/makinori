@@ -1,5 +1,5 @@
 # ==================================================================================
-# General
+# Variables
 
 LUA_SRC    := lib/lua
 LWS_SRC    := lib/libwebsockets
@@ -40,38 +40,30 @@ CFLAGS += -MMD
 CFLAGS += -fstack-clash-protection
 
 # ==================================================================================
-# makinori
+# General
 
-.PHONY: all bin clean docs lib prune sphinx
+.PHONY: all clean docs examples lib prune sphinx test
+
+all: examples lib
+
+# ==================================================================================
+# Libraries
 
 MAKINORI := $(BUILD_LIB)/libmakinori.a
 LUA      := $(BUILD_LIB)/liblua.a
 LWS      := $(BUILD_LIB)/libwebsockets.a
 
-all: bin lib
-
-bin: $(patsubst examples/%.c,$(BUILD_BIN)/%,$(wildcard examples/*.c))
-
 lib: $(MAKINORI) $(LUA) $(LWS)
 
-$(BUILD_BIN)/%: LDFLAGS += -L$(BUILD_LIB)
-$(BUILD_BIN)/%: LDLIBS += -lmakinori -llua -lwebsockets
-$(BUILD_BIN)/%: examples/%.o lib
-	mkdir -p $(BUILD_BIN)
-	$(CC) $(filter %.o,$^) -o $@ $(LDFLAGS) $(LDLIBS)
+OBJS := $(patsubst %.c,%.o,$(shell find ./src -name "*.c"))
 
-clean: MODE=clean
-clean: sphinx
-	find . -name "*.d" -not -path "./lib/*" -delete
-	find . -name "*.o" -not -path "./lib/*" -delete
-	if [ -d build ]; then rm -r build; fi
+$(MAKINORI): $(OBJS)
+	mkdir -p $(BUILD_LIB)
+	$(AR) rcs $@ $(OBJS)
 
-prune: clean
-	cd $(LUA_SRC) && $(MAKE) clean
-	if [ -d $(LWS_SRC)/build ]; then rm -r $(LWS_SRC)/build; fi
-
-# ==================================================================================
-# Libraries
+$(OBJS): CFLAGS += -I$(LUA_SRC) -I$(LWS_SRC)/build/include
+$(OBJS): %.o: %.c $(LUA) $(LWS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
 
 $(LUA): export CC=clang
 $(LUA): export CWARNGCC=
@@ -118,18 +110,17 @@ $(LWS):
 	cd $(LWS_SRC)/build && $(MAKE)
 	cp $(LWS_SRC)/build/lib/libwebsockets.a $@
 
-OBJS := $(patsubst %.c,%.o,$(shell find ./src -name "*.c"))
+# ==================================================================================
+# Examples
 
-$(MAKINORI): $(OBJS)
-	mkdir -p $(BUILD_LIB)
-	$(AR) rcs $@ $(OBJS)
+examples: $(patsubst examples/%.c,$(BUILD_BIN)/example-%,$(wildcard examples/*.c))
 
-$(OBJS): CFLAGS += -I$(LUA_SRC) -I$(LWS_SRC)/build/include
-$(OBJS): %.o: %.c $(LUA) $(LWS)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
+LDFLAGS += -L$(BUILD_LIB)
+LDLIBS += -lmakinori -llua -lwebsockets
 
-# Include at the end to avoid interfering with other rules.
--include $(OBJS:.o=.d)
+$(BUILD_BIN)/example-%: examples/%.o $(OBJS) lib
+	mkdir -p $(BUILD_BIN)
+	$(CC) $(filter %.o,$^) -o $@ $(LDFLAGS) $(LDLIBS)
 
 # ==================================================================================
 # Documentation
@@ -149,3 +140,31 @@ $(BUILD_BIN)/docs: docs/main.o lib sphinx
 
 sphinx:
 	@$(SPHINXBUILD) -M $(MODE) "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+# ==================================================================================
+# Tests
+
+TESTS := $(patsubst %.c,%.o,$(shell find tests -name "*.c"))
+
+test: $(BUILD_BIN)/test
+	$(BUILD_BIN)/test
+
+$(BUILD_BIN)/test: $(TESTS) lib $(TESTS)
+	mkdir -p $(BUILD_BIN)
+	$(CC) $(CPPFLAGS) $(CFLAGS) tests/test.c -o $@ $(LDFLAGS) $(LDLIBS)
+
+# ==================================================================================
+# Cleanup
+
+clean:
+	find . -name "*.d" -not -path "./lib/*" -delete
+	find . -name "*.o" -not -path "./lib/*" -delete
+	if [ -d build ]; then rm -r build; fi
+	if [ -d docs/_build ]; then rm -r docs/_build; fi
+
+prune: clean
+	cd $(LUA_SRC) && $(MAKE) clean
+	if [ -d $(LWS_SRC)/build ]; then rm -r $(LWS_SRC)/build; fi
+
+# Include at the end to avoid interfering with other rules.
+-include $(OBJS:.o=.d)

@@ -54,6 +54,17 @@ Views
    :arg len: The length of the portion of the string the :c:struct:`mn_view`
              references.
 
+.. c:function:: bool mn_view_eq(struct mn_view const, struct mn_view const)
+
+   Case-sensitive equality checking. Checks two :c:struct:`mn_view` instances
+   are equal, byte-per-byte.
+
+.. c:function:: bool mn_view_ieq(struct mn_view const, struct mn_view const)
+
+   Case-insensitive equality checking. Checks two :c:struct:`mn_view` instances
+   are equal, ignoring case for ASCII characters. In other words, this only
+   works as outlined when restricting attention to just strings in the BMP.
+
 .. c:function:: struct mn_view const mn_view_substr( \
                     struct mn_view const v, \
                     size_t const i, \
@@ -89,17 +100,6 @@ Views
 
    :return: The index the ``needle`` was found starting at. If not present,
             ``haystack.len`` is returned instead.
-
-.. c:function:: bool mn_view_eq(struct mn_view const, struct mn_view const)
-
-   Case-sensitive equality checking. Checks two :c:struct:`mn_view` instances
-   are equal, byte-per-byte.
-
-.. c:function:: bool mn_view_ieq(struct mn_view const, struct mn_view const)
-
-   Case-insensitive equality checking. Checks two :c:struct:`mn_view` instances
-   are equal, ignoring case for ASCII characters. In other words, this only
-   works as outlined when restricting attention to just strings in the BMP.
 
 Strings
 ^^^^^^^
