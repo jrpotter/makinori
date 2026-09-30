@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "test.h"
+#include "test_makinori/test_cmdline.c"
 #include "test_makinori/test_string.c"
 
 #define MN_ELLIPSIS 88
@@ -27,6 +28,8 @@ static inline ssize_t mn_last_sep(const char *filename)
 
 int main(void)
 {
+  mn_log_set_level(MN_LOG_LEVEL_OFF);
+
   for (size_t i = 0; MN_TEST_SUITE[i].func; ++i) {
     auto tc = &MN_TEST_SUITE[i];
     tc->func(tc);

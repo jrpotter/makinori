@@ -18,6 +18,7 @@ API
    .. c:member:: unsigned int MN_LOG_LEVEL_NOTICE = 2
    .. c:member:: unsigned int MN_LOG_LEVEL_WARN = 3
    .. c:member:: unsigned int MN_LOG_LEVEL_ERROR = 4
+   .. c:member:: unsigned int MN_LOG_LEVEL_OFF = 9
 
 .. c:function:: void mn_log_set_level(enum mn_log_level const)
 

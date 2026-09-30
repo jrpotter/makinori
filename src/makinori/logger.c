@@ -55,6 +55,10 @@ void mn_log_(enum mn_log_level const level, char const *const msg, ...)
     _lws_logv(LLL_ERR, msg, ap);
     break;
   }
+  case MN_LOG_LEVEL_OFF: {
+    // Do nothing
+    break;
+  }
   }
   va_end(ap);
 }

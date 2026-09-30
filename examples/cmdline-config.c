@@ -69,7 +69,7 @@ int main(int argc, char const *argv[argc])
     return EXIT_FAILURE;
   }
 
-  // Any logs emitted earlier are ERRORs and are always emitted. Therefore
+  // Any logs emitted earlier are ERRORs and are emitted by default. Therefore
   // setting this now behaves the same as if we were to have set it earlier.
   mn_log_set_level(config.log_level);
 

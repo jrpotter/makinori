@@ -18,8 +18,8 @@ struct mn_test_case {
 
 extern struct mn_test_case MN_TEST_SUITE[];
 
-#define MN_TEST_CASE(name_, body_)                                                     \
-  void test_##name_(struct mn_test_case *test_case_) body_;                            \
+#define MN_TEST_CASE(name_, ...)                                                       \
+  void test_##name_(struct mn_test_case *test_case_) __VA_ARGS__;                      \
                                                                                        \
   [[gnu::constructor]]                                                                 \
   void mn_constructor_test_##name_(void)                                               \
@@ -43,13 +43,38 @@ extern struct mn_test_case MN_TEST_SUITE[];
   })
 
 #define mn_assert_true(expr)                                                           \
-  mn_assert_generic_(test_case_, (expr), "should be: %s", #expr)
+  mn_assert_generic_(test_case_, (expr), "expected: %s", #expr)
 
 #define mn_assert_false(expr)                                                          \
-  mn_assert_generic_(test_case_, !(expr), "should be: !%s", #expr)
+  mn_assert_generic_(test_case_, !(expr), "expected: !%s", #expr)
 
 #define mn_assert_eq(e1, e2)                                                           \
-  mn_assert_generic_(test_case_, (e1) == (e2), "should be: %s == %s", #e1, #e2)
+  mn_assert_generic_(test_case_, (e1) == (e2), "expected: %s == %s", #e1, #e2)
 
-#define mn_assert_neq(e1, e2)                                                          \
-  mn_assert_generic_(test_case_, (e1) != (e2), "should be: %s != %s", #e1, #e2)
+#define mn_assert_ne(e1, e2)                                                           \
+  mn_assert_generic_(test_case_, (e1) != (e2), "expected: %s != %s", #e1, #e2)
+
+#define mn_assert_view_eq(e1, e2)                                                      \
+  mn_assert_generic_(test_case_, mn_view_eq((e1), (e2)), "expected: %s == %s", #e1, #e2)
+
+#define mn_assert_view_ne(e1, e2)                                                      \
+  mn_assert_generic_(                                                                  \
+      test_case_, !mn_view_eq((e1), (e2)), "expected: %s != %s", #e1, #e2)
+
+#define mn_assert_str_eq(e1, e2)                                                       \
+  mn_assert_generic_(                                                                  \
+      test_case_, mn_view_eq((e1).view, (e2).view), "expected: %s == %s", #e1, #e2)
+
+#define mn_assert_str_ne(e1, e2)                                                       \
+  mn_assert_generic_(                                                                  \
+      test_case_, !mn_view_eq((e1).view, (e2).view), "expected: %s != %s", #e1, #e2)
+
+#define mn_assert_status(expr, code)                                                   \
+  ({                                                                                   \
+    struct mn_status status = (expr);                                                  \
+    mn_assert_generic_(                                                                \
+        test_case_, status.error == (code), "expected: (%s).error == %s", #expr,       \
+        #code);                                                                        \
+  })
+
+#define mn_assert_success(expr) mn_assert_status(expr, MN_ERROR_NONE)

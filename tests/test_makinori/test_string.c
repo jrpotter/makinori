@@ -6,9 +6,9 @@ MN_TEST_CASE(mn_view_eq, {
   auto v3 = mn_str_lit("abc123 .&").view;
   auto v4 = mn_str_lit("abC123 .*").view;
 
-  mn_assert_true(mn_view_eq(v1, v2));
-  mn_assert_false(mn_view_eq(v1, v3));
-  mn_assert_false(mn_view_eq(v1, v4));
+  mn_assert_view_eq(v1, v2);
+  mn_assert_view_ne(v1, v3);
+  mn_assert_view_ne(v1, v4);
 })
 
 MN_TEST_CASE(mn_view_ieq, {
@@ -28,9 +28,9 @@ MN_TEST_CASE(mn_view_substr, {
   auto v2 = mn_view_substr(vv, 0, SIZE_MAX);
   auto v3 = mn_view_substr(vv, 3, 2);
 
-  mn_assert_true(mn_view_eq(v1, mn_view_ref("abc", 3)));
-  mn_assert_true(mn_view_eq(v2, vv));
-  mn_assert_true(mn_view_eq(v3, mn_str_lit("").view));
+  mn_assert_view_eq(v1, mn_view_ref("abc", 3));
+  mn_assert_view_eq(v2, vv);
+  mn_assert_view_eq(v3, mn_str_lit("").view);
 })
 
 MN_TEST_CASE(mn_view_cpy, {
@@ -41,7 +41,7 @@ MN_TEST_CASE(mn_view_cpy, {
     mn_assert_eq(n, v1.len);
 
     auto v2 = mn_view_ref(buffer, n);
-    mn_assert_true(mn_view_eq(v1, v2));
+    mn_assert_view_eq(v1, v2);
 }
 
 {
@@ -52,7 +52,7 @@ MN_TEST_CASE(mn_view_cpy, {
 
   auto v2 = mn_str_lit("abc").view;
   auto v3 = mn_view_ref(buffer, n);
-  mn_assert_true(mn_view_eq(v2, v3));
+  mn_assert_view_eq(v2, v3);
 }
 })
 

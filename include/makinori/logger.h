@@ -18,6 +18,7 @@ enum mn_log_level : unsigned int {
   MN_LOG_LEVEL_NOTICE = 2,
   MN_LOG_LEVEL_WARN = 3,
   MN_LOG_LEVEL_ERROR = 4,
+  MN_LOG_LEVEL_OFF = 9,
 };
 
 /// Set the per-thread log level. Lower level logs are not output.
