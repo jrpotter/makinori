@@ -16,6 +16,8 @@ struct mn_view {
 #define PRImnv "%.*s"
 #define mn_view_pri(X) (int){(X).len}, (X).ss_
 
+#define mn_view_lit(X) ((struct mn_view){.ss_ = ("" X ""), .len = MN_STR_LEN(X)})
+
 struct mn_view const mn_view_ref(char const ss[static 1], size_t const len);
 
 bool mn_view_eq(struct mn_view const, struct mn_view const);
@@ -46,10 +48,6 @@ struct mn_str {
 };
 
 #define mn_str_lit(X)                                                                  \
-  ((struct mn_str){                                                                    \
-      .ss = ("" X ""),                                                                 \
-      .len = MN_STR_LEN(X),                                                            \
-      .view = (struct mn_view){.ss_ = ("" X ""), .len = MN_STR_LEN(X)},                \
-  })
+  ((struct mn_str){.ss = ("" X ""), .len = MN_STR_LEN(X), .view = mn_view_lit(X)})
 
 struct mn_str const mn_str_ref(char const ss[static 1], size_t const len);

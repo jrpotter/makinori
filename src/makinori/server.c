@@ -111,7 +111,7 @@ mn_find_substr(struct mn_view const path, struct mn_view const needle)
       return substr;
     }
   }
-  return mn_str_lit("").view;
+  return mn_view_lit("");
 }
 
 static struct mn_route const *const mn_route_match(

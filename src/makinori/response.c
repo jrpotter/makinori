@@ -73,7 +73,7 @@ struct mn_status mn_response_set_header(
     return MN_FAILURE(MN_ERROR_IMMUTABLE);
   }
 
-  if (mn_view_ieq(header.view, mn_str_lit("Content-Type").view)) {
+  if (mn_view_ieq(header.view, mn_view_lit("Content-Type"))) {
     if (r->common_type.len > 0) {
       return MN_FAILURE(MN_ERROR_DUPLICATE);
     }
@@ -81,7 +81,7 @@ struct mn_status mn_response_set_header(
     return MN_SUCCESS;
   }
 
-  if (mn_view_ieq(header.view, mn_str_lit("Content-Length").view)) {
+  if (mn_view_ieq(header.view, mn_view_lit("Content-Length"))) {
     if (r->common_length.len > 0) {
       return MN_FAILURE(MN_ERROR_DUPLICATE);
     }

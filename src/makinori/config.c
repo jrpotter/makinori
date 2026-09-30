@@ -18,11 +18,11 @@ static char const runtime_lua[] = {
 #embed "./runtime.lua"
     , '\0'};
 
-static struct mn_str constexpr FLAG_LEVEL_DEBUG = mn_str_lit("debug");
-static struct mn_str constexpr FLAG_LEVEL_INFO = mn_str_lit("info");
-static struct mn_str constexpr FLAG_LEVEL_NOTICE = mn_str_lit("notice");
-static struct mn_str constexpr FLAG_LEVEL_WARN = mn_str_lit("warn");
-static struct mn_str constexpr FLAG_LEVEL_ERROR = mn_str_lit("error");
+static struct mn_view constexpr FLAG_LEVEL_DEBUG = mn_view_lit("debug");
+static struct mn_view constexpr FLAG_LEVEL_INFO = mn_view_lit("info");
+static struct mn_view constexpr FLAG_LEVEL_NOTICE = mn_view_lit("notice");
+static struct mn_view constexpr FLAG_LEVEL_WARN = mn_view_lit("warn");
+static struct mn_view constexpr FLAG_LEVEL_ERROR = mn_view_lit("error");
 
 static struct mn_status mn_load_before(mn_lua_t *L)
 {
@@ -91,17 +91,17 @@ static struct mn_status mn_load_after(mn_lua_t *L, struct mn_config out[const st
     lua_getglobal(L, "LOG_LEVEL");
     size_t len = 0;
     const char *lua_val = lua_tolstring(L, -1, &len);
-    struct mn_str val = mn_str_ref(lua_val, len);
+    struct mn_view val = mn_view_ref(lua_val, len);
 
-    if (mn_view_eq(val.view, FLAG_LEVEL_DEBUG.view)) {
+    if (mn_view_eq(val, FLAG_LEVEL_DEBUG)) {
       out->log_level = MN_LOG_LEVEL_DEBUG;
-    } else if (mn_view_eq(val.view, FLAG_LEVEL_INFO.view)) {
+    } else if (mn_view_eq(val, FLAG_LEVEL_INFO)) {
       out->log_level = MN_LOG_LEVEL_INFO;
-    } else if (mn_view_eq(val.view, FLAG_LEVEL_NOTICE.view)) {
+    } else if (mn_view_eq(val, FLAG_LEVEL_NOTICE)) {
       out->log_level = MN_LOG_LEVEL_NOTICE;
-    } else if (mn_view_eq(val.view, FLAG_LEVEL_WARN.view)) {
+    } else if (mn_view_eq(val, FLAG_LEVEL_WARN)) {
       out->log_level = MN_LOG_LEVEL_WARN;
-    } else if (mn_view_eq(val.view, FLAG_LEVEL_ERROR.view)) {
+    } else if (mn_view_eq(val, FLAG_LEVEL_ERROR)) {
       out->log_level = MN_LOG_LEVEL_ERROR;
     } else {
       mn_assert(false);

@@ -43,6 +43,15 @@ Views
       printf("View: " PRImnv "\n", mn_view_pri(v));
       // Outputs: View hello\n
 
+.. c:macro:: mn_view_lit(X)
+
+   Create a new :c:struct:`mn_view` instance pointing at C-string literal ``X``.
+   It is assumed ``X`` does not contain embedded ``NUL`` characters.
+
+   Generally speaking, you should prefer :c:macro:`mn_str_lit`. But this is a
+   nice shorthand in cases where you only ever want to access the literal as
+   a view.
+
 .. c:function:: struct mn_view const mn_view_ref( \
                     char const ss[static 1], \
                     size_t const len)
@@ -112,7 +121,7 @@ Strings
    lifetime.
 
    This type is primarily motivated as a convenient means of referencing C-style
-   strings' length.
+   strings' lengths.
 
    .. c:member:: char const *ss
 
