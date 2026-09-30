@@ -29,16 +29,14 @@ convenience.
 Minimal Example
 ---------------
 
-Test your build against the following minimal ``main.c`` example. Once running,
-send an HTTP GET request to ``localhost:1314``. You will receive an HTTP 200 OK
-response with body ``Hello, world``.
+Test your build against the following minimal ``main.c`` example:
 
 .. code-block:: c
 
    #include "makinori.h"
 
    static struct mn_status
-   handler_index(struct mn_request req, struct mn_response *const res)
+   handle_index(struct mn_request req, struct mn_response *const res)
    {
      return mn_response_write(res, mn_str_lit("Hello, world"));
    }
@@ -46,15 +44,25 @@ response with body ``Hello, world``.
    static struct mn_route route_index = {
        .method = MN_METHOD_GET,
        .pattern = mn_str_lit("/"),
-       .handler = handler_index};
+       .handler = handle_index};
 
    int main(void)
    {
      struct mn_config config = {};
-     mn_config_load(runtime, &config);
+     mn_config_load(&config);
 
      struct mn_server server = {.config = config, .route = route_index};
      mn_server_run(&server);
 
      mn_config_unload(&config);
    }
+
+Assuming **makinori** was cloned in directory ``makinori``, the following can be
+compiled using a command with shape roughly:
+
+.. code-block:: sh
+
+   $ clang main.c -std=c23 \
+   >     -Imakinori/include \
+   >     -Lmakinori/build/lib \
+   >     -lmakinori -llua -lm -lwebsockets
