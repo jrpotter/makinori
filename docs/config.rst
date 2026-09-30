@@ -110,6 +110,13 @@ against stack overflows.
 
 Must be an ``integer`` greater than ``0``.
 
+.. warning::
+
+   If too small a value, you will encounter a ``SIGSEGV`` when running. Try
+   running ``make BUILD_TYPE=Debug`` and ``lldb`` the executable before filing
+   an issue. You'll see an error like "invalid permissions for mapped object"
+   when this traps.
+
 .. _ref-config-log-level:
 
 ``LOG_LEVEL``
@@ -125,11 +132,16 @@ Must be a ``string`` with value one of:
 * ``'warn'``
 * ``'error'``
 
+.. note::
+
+   This value is independent of the ``BUILD_TYPE`` setting. A ``Release`` build
+   can still emit ``'debug'`` logs.
+
 .. _ref-config-port:
 
 ``PORT``
 """"""""
 
-Defaults to ``1314``. The port that the server will be listening on.
+Defaults to ``1314``. The port the server listens for incoming requests on.
 
 Must be an ``integer`` with value between ``1`` and ``65535`` inclusive.

@@ -42,7 +42,7 @@ CFLAGS += -fstack-clash-protection
 # ==================================================================================
 # makinori
 
-.PHONY: all bin clean docs lib sphinx
+.PHONY: all bin clean docs lib prune sphinx
 
 MAKINORI := $(BUILD_LIB)/libmakinori.a
 LUA      := $(BUILD_LIB)/liblua.a
@@ -62,10 +62,12 @@ $(BUILD_BIN)/%: examples/%.o lib
 
 clean: MODE=clean
 clean: sphinx
-	find . -name "*.d" -delete
-	find . -name "*.o" -delete
-	cd $(LUA_SRC) && $(MAKE) clean
+	find . -name "*.d" -not -path "./lib/*" -delete
+	find . -name "*.o" -not -path "./lib/*" -delete
 	if [ -d build ]; then rm -r build; fi
+
+prune: clean
+	cd $(LUA_SRC) && $(MAKE) clean
 	if [ -d $(LWS_SRC)/build ]; then rm -r $(LWS_SRC)/build; fi
 
 # ==================================================================================
