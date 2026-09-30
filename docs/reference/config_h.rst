@@ -28,10 +28,6 @@ API
 
       A reference to the :ref:`ref-config-coroutine-pages` option.
 
-   .. c:member:: enum mn_event_loop ev_loop
-
-      A reference to the :ref:`ref-config-event-loop` option.
-
    .. c:member:: enum mn_log_level log_level
 
       A reference to the :ref:`ref-config-log-level` option.

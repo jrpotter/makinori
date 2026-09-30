@@ -3,9 +3,6 @@
 -- heavily use the stack, it may be helpful to bump this up.
 COROUTINE_PAGES = 4
 
--- The event loop library used. One of: poll.
-EVENT_LOOP = 'poll'
-
 -- Emit logs at this level or higher. One of: debug, info, notice, warn, error.
 LOG_LEVEL = 'debug'
 

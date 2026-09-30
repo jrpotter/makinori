@@ -6,13 +6,6 @@ assert(
 )
 
 assert(
-  type(EVENT_LOOP) == 'string' and (
-    EVENT_LOOP == 'poll'
-  ),
-  "EVENT_LOOP must be one of 'poll'"
-)
-
-assert(
   type(LOG_LEVEL) == 'string' and (
     LOG_LEVEL == 'debug' or
     LOG_LEVEL == 'info' or

@@ -107,13 +107,6 @@ mn_config_load_with(struct mn_str const path, struct mn_config out[const static 
   }
 
   {
-    // Placeholder. Currently 'poll' is the only option.
-    lua_getglobal(L, "EVENT_LOOP");
-    out->ev_loop = MN_EVENT_LOOP_POLL;
-    lua_pop(L, 1);
-  }
-
-  {
     lua_getglobal(L, "LOG_LEVEL");
     size_t len = 0;
     const char *lua_val = lua_tolstring(L, -1, &len);

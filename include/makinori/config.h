@@ -10,7 +10,6 @@ enum mn_event_loop : unsigned int {
 
 struct mn_config {
   unsigned long long coro_pages; // COROUTINE_PAGES
-  enum mn_event_loop ev_loop;    // EVENT_LOOP
   enum mn_log_level log_level;   // LOG_LEVEL
   unsigned long port;            // PORT
   mn_lua_t *lua_;

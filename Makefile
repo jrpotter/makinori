@@ -49,21 +49,23 @@ LUA      := $(BUILD_LIB)/liblua.a
 LWS      := $(BUILD_LIB)/libwebsockets.a
 
 all: bin lib
+
 bin: $(patsubst examples/%.c,$(BUILD_BIN)/%,$(wildcard examples/*.c))
+
 lib: $(MAKINORI) $(LUA) $(LWS)
 
 $(BUILD_BIN)/%: LDFLAGS += -L$(BUILD_LIB)
 $(BUILD_BIN)/%: LDLIBS += -lmakinori -llua -lwebsockets
 $(BUILD_BIN)/%: examples/%.o lib
-	mkdir -p build/bin
+	mkdir -p $(BUILD_BIN)
 	$(CC) $(filter %.o,$^) -o $@ $(LDFLAGS) $(LDLIBS)
 
 clean: MODE=clean
 clean: sphinx
 	find . -name "*.d" -delete
 	find . -name "*.o" -delete
-	if [ -d build ]; then rm -r build; fi
 	cd $(LUA_SRC) && $(MAKE) clean
+	if [ -d build ]; then rm -r build; fi
 	if [ -d $(LWS_SRC)/build ]; then rm -r $(LWS_SRC)/build; fi
 
 # ==================================================================================
@@ -72,11 +74,12 @@ clean: sphinx
 $(LUA): export CC=clang
 $(LUA): export CWARNGCC=
 $(LUA):
+	mkdir -p $(BUILD_LIB)
 	cd $(LUA_SRC) && $(MAKE) -e liblua.a
-	mkdir -p build/lib
 	cp $(LUA_SRC)/liblua.a $@
 
 $(LWS):
+	mkdir -p $(BUILD_LIB)
 	cd $(LWS_SRC) && cmake \
 		-G 'Unix Makefiles' \
 		-DCMAKE_BUILD_TYPE=Release \
@@ -111,7 +114,6 @@ $(LWS):
 		-DLWS_WITH_UPNG=OFF \
 		-B build
 	cd $(LWS_SRC)/build && $(MAKE)
-	mkdir -p build/lib
 	cp $(LWS_SRC)/build/lib/libwebsockets.a $@
 
 OBJS := $(patsubst %.c,%.o,$(shell find ./src -name "*.c"))
