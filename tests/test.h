@@ -77,4 +77,10 @@ extern struct mn_test_case MN_TEST_SUITE[];
         #code);                                                                        \
   })
 
-#define mn_assert_success(expr) mn_assert_status(expr, MN_ERROR_NONE)
+#define mn_assert_success(expr)                                                        \
+  ({                                                                                   \
+    struct mn_status status = (expr);                                                  \
+    mn_assert_generic_(                                                                \
+        test_case_, status.error == MN_ERROR_NONE,                                     \
+        "expected: (%s).error == MN_ERROR_NONE", #expr);                               \
+  })

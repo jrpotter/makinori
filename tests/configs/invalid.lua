@@ -1,0 +1,2 @@
+COROUTINE_PAGES = 0
+LOG_LEVEL = 'info'

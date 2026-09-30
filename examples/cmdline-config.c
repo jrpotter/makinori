@@ -1,13 +1,3 @@
-/**
- * Demonstrates usage of the cmdline.h module to parse command line flags.
- *
- * ```sh
- * $ make bin/cmdline-usage
- * $ ./cmdline-usage -h
- * $ ./cmdline-usage run
- * $ curl localhost:1314
- * ```
- */
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -64,7 +54,11 @@ int main(int argc, char const *argv[argc])
   }
 
   struct mn_config config = {};
-  status = mn_config_load_with(flag_config.vals[0], &config);
+  if (flag_config.set) {
+    status = mn_config_load_file(flag_config.vals[0], &config);
+  } else {
+    status = mn_config_load(&config);
+  }
   if (status.error) {
     return EXIT_FAILURE;
   }

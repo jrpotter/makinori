@@ -80,12 +80,12 @@ file named ``./release.lua``:
    LOG_LEVEL = 'notice'
 
 We could then populate an :c:struct:`mn_config` with these values by calling
-:c:func:`mn_config_load_with` like so:
+:c:func:`mn_config_load_file` like so:
 
 .. code-block:: c
 
    struct mn_config config = {};
-   mn_config_load_with(mn_str_lit("./release.lua"), &config);
+   mn_config_load_file(mn_str_lit("./release.lua"), &config);
 
 This approach benefits from additional runtime checks made against the
 values. It also easily enables running the server with different settings per
@@ -96,8 +96,10 @@ set).
 Settings
 ^^^^^^^^
 
-A default configuration containing the following variables is always loaded. A
-call to :c:func:`mn_config_load_with` will run the specified chunk afterward.
+A default configuration containing the following variables is always loaded
+first. A call to :c:func:`mn_config_load_file` or :c:func:`mn_config_load_chunk`
+will run the additional Lua code after the defaults are loaded but before
+settings verification.
 
 .. _ref-config-coroutine-pages:
 

@@ -85,12 +85,12 @@ API
    :aborts: If space for :c:macro:`MN_REQUEST_MAX_CAPTURES` could not be
             allocated.
 
-.. c:function:: struct mn_status mn_config_load_with( \
+.. c:function:: struct mn_status mn_config_load_file( \
                     struct mn_str const path, \
                     struct mn_config out[const static 1])
 
    Loads the default configuration and then applies any overridden configuration
-   options as defined in the file at :c:expr:`path`.
+   options as defined in the file at ``path``.
 
    If successful, the :c:expr:`out` parameter must be cleaned up using
    :c:func:`mn_config_unload`.
@@ -105,12 +105,32 @@ API
    :aborts: If space for :c:macro:`MN_REQUEST_MAX_CAPTURES` could not be
             allocated.
 
+.. c:function:: struct mn_status mn_config_load_chunk( \
+                    char const chunk[const static 1], \
+                    struct mn_config out[const static 1])
+
+   Loads the default configuration and then applies any overridden configuration
+   options as defined in ``chunk``.
+
+   If successful, the :c:expr:`out` parameter must be cleaned up using
+   :c:func:`mn_config_unload`.
+
+   :arg path: A lua chunk to execute.
+   :arg out: The :c:struct:`mn_config` reference to load.
+
+   :return: | An :c:struct:`mn_status` with value:
+            | - :c:member:`MN_ERROR_NONE` on success;
+            | - :c:member:`MN_ERROR_CONFIG` on failure.
+
+   :aborts: If space for :c:macro:`MN_REQUEST_MAX_CAPTURES` could not be
+            allocated.
+
 .. c:function:: void mn_config_unload(struct mn_config c[const static 1])
 
    Unloads a configuration object.
 
    Should be called once you are finished using a :c:struct:`mn_config` object
-   that was successfully loaded by a call to :c:func:`mn_config_load` or
-   :c:func:`mn_config_load_with`.
+   that was successfully loaded by a call to :c:func:`mn_config_load`,
+   :c:func:`mn_config_load_file` or :c:func:`mn_config_load_chunk`.
 
    :arg c: The configuration to unload.

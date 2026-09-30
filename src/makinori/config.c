@@ -4,7 +4,6 @@
 
 #include "makinori/config.h"
 #include "makinori/logger.h"
-#include "makinori/request.h"
 #include "makinori/util.h"
 
 static char const base_lua[] = {
@@ -25,61 +24,43 @@ static struct mn_str constexpr FLAG_LEVEL_NOTICE = mn_str_lit("notice");
 static struct mn_str constexpr FLAG_LEVEL_WARN = mn_str_lit("warn");
 static struct mn_str constexpr FLAG_LEVEL_ERROR = mn_str_lit("error");
 
-struct mn_status mn_config_load(struct mn_config out[const static 1])
+static struct mn_status mn_load_before(mn_lua_t *L)
 {
-  return mn_config_load_with(mn_str_lit(""), out);
-}
-
-struct mn_status
-mn_config_load_with(struct mn_str const path, struct mn_config out[const static 1])
-{
-  lua_State *L = luaL_newstate();
   luaL_openlibs(L);
-
-  // Keep in mind lua_checkstack only grows the stack, never shrinks it. The
-  // default size should be able to accommodate typical usage.
+  // lua_checkstack never shrinks the stack. The default size should be able to
+  // accommodate typical usage.
   mn_assert(lua_checkstack(L, 2 * MN_REQUEST_MAX_CAPTURES));
 
   if (luaL_loadstring(L, base_lua)) {
     auto status =
         MN_ERROR_EMIT(MN_ERROR_CONFIG, "On loading base.lua: %s", lua_tostring(L, -1));
-    lua_pop(L, 1);
+    lua_close(L);
     return status;
   }
 
   if (lua_pcall(L, 0, 0, 0)) {
     auto status =
         MN_ERROR_EMIT(MN_ERROR_CONFIG, "On running base.lua: %s", lua_tostring(L, -1));
-    lua_pop(L, 1);
+    lua_close(L);
     return status;
   }
 
-  if (path.len > 0) {
-    if (luaL_loadfile(L, path.ss)) {
-      auto status = MN_ERROR_EMIT(
-          MN_ERROR_CONFIG, "On loading user config: %s", lua_tostring(L, -1));
-      lua_pop(L, 1);
-      return status;
-    }
-    if (lua_pcall(L, 0, 0, 0)) {
-      auto status = MN_ERROR_EMIT(
-          MN_ERROR_CONFIG, "On running user config: %s", lua_tostring(L, -1));
-      lua_pop(L, 1);
-      return status;
-    }
-  }
+  return MN_SUCCESS;
+}
 
+static struct mn_status mn_load_after(mn_lua_t *L, struct mn_config out[const static 1])
+{
   if (luaL_loadstring(L, verify_lua)) {
     auto status = MN_ERROR_EMIT(
         MN_ERROR_CONFIG, "On loading verify.lua: %s", lua_tostring(L, -1));
-    lua_pop(L, 1);
+    lua_close(L);
     return status;
   }
 
   if (lua_pcall(L, 0, 0, 0)) {
     auto status = MN_ERROR_EMIT(
         MN_ERROR_CONFIG, "On running verify.lua: %s", lua_tostring(L, -1));
-    lua_pop(L, 1);
+    lua_close(L);
     return status;
   }
 
@@ -139,6 +120,87 @@ mn_config_load_with(struct mn_str const path, struct mn_config out[const static 
   out->lua_ = L;
 
   return MN_SUCCESS;
+}
+
+struct mn_status mn_config_load(struct mn_config out[const static 1])
+{
+  mn_lua_t *L = luaL_newstate();
+
+  {
+    auto status = mn_load_before(L);
+    if (status.error) {
+      return status;
+    }
+  }
+
+  return mn_load_after(L, out);
+}
+
+struct mn_status
+mn_config_load_file(struct mn_str const path, struct mn_config out[const static 1])
+{
+  mn_lua_t *L = luaL_newstate();
+
+  {
+    auto status = mn_load_before(L);
+    if (status.error) {
+      return status;
+    }
+  }
+
+  // If this were to continue to `luaL_loadfile`, it would attempt to read in
+  // stdin.
+  if (path.len == 0) {
+    auto status = MN_ERROR_EMIT(MN_ERROR_CONFIG, "Attempted to load an empty file");
+    lua_close(L);
+    return status;
+  }
+
+  if (luaL_loadfile(L, path.ss)) {
+    auto status =
+        MN_ERROR_EMIT(MN_ERROR_CONFIG, "On loading file: %s", lua_tostring(L, -1));
+    lua_close(L);
+    return status;
+  }
+
+  if (lua_pcall(L, 0, 0, 0)) {
+    auto status =
+        MN_ERROR_EMIT(MN_ERROR_CONFIG, "On running file: %s", lua_tostring(L, -1));
+    lua_close(L);
+    return status;
+  }
+
+  return mn_load_after(L, out);
+}
+
+struct mn_status mn_config_load_chunk(
+    char const chunk[const static 1],
+    struct mn_config out[const static 1])
+{
+  mn_lua_t *L = luaL_newstate();
+
+  {
+    auto status = mn_load_before(L);
+    if (status.error) {
+      return status;
+    }
+  }
+
+  if (luaL_loadstring(L, chunk)) {
+    auto status =
+        MN_ERROR_EMIT(MN_ERROR_CONFIG, "On loading chunk: %s", lua_tostring(L, -1));
+    lua_close(L);
+    return status;
+  }
+
+  if (lua_pcall(L, 0, 0, 0)) {
+    auto status =
+        MN_ERROR_EMIT(MN_ERROR_CONFIG, "On running chunk: %s", lua_tostring(L, -1));
+    lua_close(L);
+    return status;
+  }
+
+  return mn_load_after(L, out);
 }
 
 void mn_config_unload(struct mn_config c[const static 1])

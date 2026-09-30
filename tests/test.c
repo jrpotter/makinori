@@ -1,8 +1,9 @@
 #include <stdlib.h>
 
+#include "makinori/test_cmdline.c"
+#include "makinori/test_config.c"
+#include "makinori/test_string.c"
 #include "test.h"
-#include "test_makinori/test_cmdline.c"
-#include "test_makinori/test_string.c"
 
 #define MN_ELLIPSIS 88
 #define MN_ELLIPSIS_S MN_STR_TO(MN_ELLIPSIS)
@@ -56,7 +57,7 @@ int main(void)
     }
   }
 
-  fprintf(stdout, "=========\nPASSED: %lu\nFAILED: %lu\n", MN_TEST_PASS, MN_TEST_FAIL);
+  fprintf(stdout, "==========\nPASSED: %lu\nFAILED: %lu\n", MN_TEST_PASS, MN_TEST_FAIL);
 
   return MN_TEST_FAIL > 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
