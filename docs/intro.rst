@@ -11,58 +11,32 @@ the following prerequisites are installed:
 2. `make <https://www.gnu.org/software/make/>`__ to build **makinori**, and
 3. `CMake <https://cmake.org/>`__ to build the ``libwebsockets`` submodule.
 
-Build
------
+New Projects
+------------
 
-You can now clone the repository and build all of the examples by running:
-
-.. code-block:: sh
-
-   $ git clone --recurse-submodules https://github.com/jrpotter/makinori.git
-   $ make [BUILD_TYPE=Debug|Release]
-
-You will find the build artifacts under the newly created ``build`` directory.
-A copy of the `lua <https://www.lua.org>`__ (v5.5.1) and `libwebsockets
-<https://libwebsockets.org/>`__ (v4.5) static libraries are included for
-convenience.
-
-Minimal Example
----------------
-
-Test your build against the following minimal ``main.c`` example:
-
-.. code-block:: c
-
-   #include "makinori.h"
-
-   static struct mn_status
-   handle_index(struct mn_request req, struct mn_response *const res)
-   {
-     return mn_response_write(res, mn_str_lit("Hello, world"));
-   }
-
-   static struct mn_route route_index = {
-       .method = MN_METHOD_GET,
-       .pattern = mn_str_lit("/"),
-       .handler = handle_index};
-
-   int main(void)
-   {
-     struct mn_config config = {};
-     mn_config_load(&config);
-
-     struct mn_server server = {.config = config, .route = route_index};
-     mn_server_run(&server);
-
-     mn_config_unload(&config);
-   }
-
-Assuming **makinori** was cloned in directory ``makinori``, the following can be
-compiled using a command with shape roughly:
+If starting a new project or just looking to experiment with **makinori**, the
+easiest way to get started is by cloning the ``scaffold`` project:
 
 .. code-block:: sh
 
-   $ clang main.c -std=c23 \
-   >     -Imakinori/include \
-   >     -Lmakinori/build/lib \
-   >     -lmakinori -llua -lm -lwebsockets
+   $ git clone --recurse-submodules https://github.com/makinori-dev/scaffold
+   $ cd scaffold && make
+
+This will produce a new top-level ``manage`` executable that you can then use to
+start your server, run database migrations (pending), etc.
+
+Libraries
+---------
+
+If you instead want to get a copy of the **makinori** library, clone and build
+against the ``makinori`` repository:
+
+.. code-block:: sh
+
+   $ git clone --recurse-submodules https://github.com/makinori-dev/makinori.git
+   $ cd makinori && make [BUILD_TYPE=Debug|Release]
+
+After ``make`` finishes, you will find the build artifacts under the newly
+created ``build`` directory. A copy of the `lua <https://www.lua.org>`__
+(v5.5.1) and `libwebsockets <https://libwebsockets.org/>`__ (v4.5) static
+libraries are included for convenience.
