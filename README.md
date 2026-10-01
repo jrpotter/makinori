@@ -19,11 +19,11 @@ Building **makinori** requires the following:
 1. [CMake](https://cmake.org/).
 
 Optionally, if interested in building documentation locally, you should install
-[Sphinx](https://www.sphinx-doc.org/en/master/). You can now clone the project
-and build each of the examples:
+[Sphinx](https://www.sphinx-doc.org/en/master/). You can now clone and build
+the project:
 
 ```sh
-$ git clone --recurse-submodules https://github.com/jrpotter/makinori.git
+$ git clone --recurse-submodules https://github.com/makinori-dev/makinori.git
 $ make
 $ make docs  # Optional
 $ make test  # Optional

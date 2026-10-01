@@ -42,9 +42,9 @@ CFLAGS += -fstack-clash-protection
 # ==================================================================================
 # General
 
-.PHONY: all clean docs examples lib prune sphinx test
+.PHONY: all clean docs lib prune sphinx test
 
-all: examples lib
+all: lib
 
 # ==================================================================================
 # Libraries
@@ -110,17 +110,9 @@ $(LWS):
 	cd $(LWS_SRC)/build && $(MAKE)
 	cp $(LWS_SRC)/build/lib/libwebsockets.a $@
 
-# ==================================================================================
-# Examples
-
-examples: $(patsubst examples/%.c,$(BUILD_BIN)/example-%,$(wildcard examples/*.c))
-
+# Update for remainder of recipes
 LDFLAGS += -L$(BUILD_LIB)
 LDLIBS += -lmakinori -llua -lwebsockets
-
-$(BUILD_BIN)/example-%: examples/%.o $(OBJS) lib
-	mkdir -p $(BUILD_BIN)
-	$(CC) $(filter %.o,$^) -o $@ $(LDFLAGS) $(LDLIBS)
 
 # ==================================================================================
 # Documentation
